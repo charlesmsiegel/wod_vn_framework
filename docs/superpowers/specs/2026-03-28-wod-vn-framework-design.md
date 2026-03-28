@@ -14,7 +14,7 @@ A Ren'Py framework for building World of Darkness visual novels. Distributed as 
 - **Deterministic, not dice-based.** Stats gate options and affect outcomes. No randomness.
 - **Framework for authors, not a specific game.** Target audience is storytellers who know Ren'Py scripting but not Python.
 - **Plugin architecture.** Splat-specific content (Mage, Vampire, etc.) lives in pluggable data packs. Core engine is splat-agnostic.
-- **Dual syntax.** Authors can use a compact shorthand (`[Forces >= 3]`) or native Ren'Py (`if pc.check("Forces", 3)`).
+- **Dual syntax.** Authors can use a compact shorthand (`[Forces >= 3]`) or native Ren'Py (`if pc.gate("Forces", ">=", 3)`).
 - **Two bundled themes.** Gothic (WoD aesthetic) and Neutral (easy to reskin).
 - **Single PC default, multi-PC opt-in.**
 - **Pre-defined characters or player chargen — author's choice.**
@@ -24,29 +24,29 @@ A Ren'Py framework for building World of Darkness visual novels. Distributed as 
 ```
 game/
 ├── wod_core/               # Core Python engine
-│   ├── engine.py           # Trait system, resource pools, validation
+│   ├── engine.py           # Trait system, validation, character objects
+│   ├── resources.py        # Resource pool system (spend, gain, links)
 │   ├── gating.py           # Stat-gating + choice filtering
-│   ├── syntax.py           # Custom statement compiler ([Forces >= 3] -> Python)
+│   ├── syntax.py           # Shorthand compiler ([Forces >= 3] -> wod.gate())
 │   ├── chargen.py          # Character creation framework
 │   └── loader.py           # Data file loader (YAML)
 ├── wod_screens/            # Ren'Py screens
 │   ├── character_sheet.rpy
 │   ├── resource_bars.rpy
 │   └── chargen.rpy
-├── wod_statements.rpy      # Ren'Py custom statement registration
+├── wod_statements.rpy      # Registers shorthand syntax via Ren'Py CDS API
 ├── themes/
 │   ├── gothic/
-│   │   ├── theme.yaml
-│   │   ├── gui.rpy
-│   │   ├── screens.rpy
+│   │   ├── theme.yaml      # Color palette, font config
+│   │   ├── screens.rpy     # Themed screen implementations
 │   │   ├── fonts/
 │   │   └── images/
 │   └── neutral/
 │       ├── theme.yaml
-│       ├── gui.rpy
 │       ├── screens.rpy
 │       ├── fonts/
 │       └── images/
+├── gui.rpy                 # Root GUI config — delegates to active theme
 └── splats/
     └── mage/
         ├── manifest.yaml
@@ -62,6 +62,8 @@ game/
 A generic system for defining, storing, and validating character traits. The engine knows nothing about specific traits — all definitions come from splat data files.
 
 ### Schema Definition (YAML)
+
+Trait categories use either `groups` (traits organized under sub-groups) or `traits` (flat list). These are mutually exclusive — use `groups` when the category has meaningful sub-groupings (e.g., Attributes split into Physical/Social/Mental), use `traits` for flat lists.
 
 ```yaml
 # splats/mage/schema.yaml
@@ -89,13 +91,43 @@ trait_categories:
     traits: [Correspondence, Entropy, Forces, Life, Matter, Mind, Prime, Spirit, Time]
     default: 0
     range: [0, 5]
+
+  arete:
+    display_name: "Arete"
+    traits: [Arete]
+    default: 1
+    range: [1, 10]
+
+  backgrounds:
+    display_name: "Backgrounds"
+    traits: [Allies, Avatar, Contacts, Destiny, Dream, Familiar, Influence, Mentor, Node, Resources, Sanctum, Wonder]
+    default: 0
+    range: [0, 5]
+
+# Constraints between traits — validated on set() and during chargen
+trait_constraints:
+  - type: "max_linked"
+    target_category: "spheres"
+    limited_by: "Arete"
+    rule: "No Sphere can exceed Arete rating"
 ```
+
+### Trait Constraints
+
+The `trait_constraints` section defines inter-trait dependencies. Supported constraint types:
+
+| Type | Meaning | Example |
+|------|---------|---------|
+| `max_linked` | All traits in target category capped by another trait's value | Spheres capped by Arete |
+| `min_required` | A trait requires a minimum in another trait to be raised | (Future: Disciplines requiring Generation) |
+
+Constraints are enforced by `engine.py` during `set()`, `advance()`, and chargen. Violations raise errors in development, log warnings in release.
 
 ### Runtime Behavior
 
 - `engine.py` loads the schema at init time.
-- Character objects hold current trait values as a flat dict (`{"Strength": 3, "Forces": 2, ...}`).
-- Setting a trait validates against the schema's range — out-of-range raises an error during development, logs a warning in release.
+- Character objects hold current trait values as a flat dict (`{"Strength": 3, "Forces": 2, ...}`). The loader flattens the nested YAML structure (traits grouped by category) into this flat dict at load time. **Trait names must be unique across all categories within a splat** — the schema loader validates this at init.
+- Setting a trait validates against both the schema's range and any applicable trait constraints.
 - Traits not in the schema are rejected unless the author explicitly opts into freeform traits.
 
 ### Override/Extension
@@ -109,11 +141,13 @@ overrides:
   trait_categories:
     spheres:
       range: [0, 10]
+    arete:
+      range: [1, 10]
 ```
 
 ## Section 2: Resource Pool System
 
-Generic trackable resources configured per splat. Handles anything with a current value, max, and rules about spending/gaining.
+Generic trackable resources configured per splat. Handles anything with a current value, max, and rules about spending/gaining. Implemented in `resources.py`.
 
 ### Resource Definition (YAML)
 
@@ -133,7 +167,7 @@ resources:
   willpower:
     display_name: "Willpower"
     range: [0, 10]
-    default_max: "trait:Wits"
+    default_max: 5
     default_current: "max"
 
   health:
@@ -156,12 +190,26 @@ resource_links:
     combined_max: 20
 ```
 
+### Resource Max Defaults
+
+When a resource specifies `default_current: "max"`, the max value is determined by (in priority order):
+
+1. Explicit `default_max` value (e.g., `default_max: 5`)
+2. Upper bound of `range` (e.g., `range: [0, 7]` → max is 7)
+
+### Linked Resource Behavior
+
+When a linked pool constraint would be violated (e.g., `quintessence` is 15, `paradox` is 5, and `gain("paradox", 3)` is called):
+
+- The gain succeeds: paradox becomes 8.
+- The linked pool is reduced to maintain the constraint: quintessence is reduced to 12.
+- If the author wants the gain to be capped instead (paradox stays at 5), they should check the constraint before calling gain.
+
 ### Runtime Behavior
 
 - Resources are separate from traits — traits are static ratings, resources are pools that get spent and replenished.
 - `resources.py` provides `spend(name, amount)`, `gain(name, amount)`, `current(name)`, `at_max(name)`, `at_min(name)`.
-- Linked resources enforce combined constraints automatically (e.g., `quintessence + paradox <= 20`). When one pool increases, the other is capped down if necessary.
-- Linked resources (like Willpower max derived from a trait) update automatically when the source trait changes.
+- Linked resources enforce combined constraints automatically.
 - Spending more than available: the gated option doesn't appear; a manual `spend()` call returns False.
 
 ### Script Usage
@@ -177,7 +225,7 @@ $ pc.gain("paradox", 1)
 
 ## Section 3: Stat Gating & Choice System
 
-The core authoring mechanic. Two syntaxes, one system — the shorthand compiles to native Ren'Py calls.
+The core authoring mechanic. Two syntaxes, one system — the shorthand compiles to generic `wod.gate()` calls that dispatch at runtime.
 
 ### Shorthand Syntax
 
@@ -197,26 +245,39 @@ menu:
 
 ```renpy
 menu:
-    "Rewrite the ward's resonance" if pc.check("Prime", 3) and pc.check("Forces", 2):
+    "Rewrite the ward's resonance" if pc.gate("Prime", ">=", 3) and pc.gate("Forces", ">=", 2):
         jump rewrite_ward
-    "Perceive the ward's structure" if pc.check("Prime", 1):
+    "Perceive the ward's structure" if pc.gate("Prime", ">=", 1):
         jump perceive_ward
-    "Try to push through" if pc.check("Stamina", 3):
+    "Try to push through" if pc.gate("Stamina", ">=", 3):
         jump brute_force
     "Back away":
         jump retreat
 ```
 
+### The `gate()` and `has()` Methods
+
+Two levels of API exist:
+
+- **`pc.gate(name, op, value)`** / **`pc.has(name)`** — instance methods on a character object. Used in native syntax and outcome branching where the author specifies which character to check.
+- **`wod.gate(name, op, value)`** / **`wod.has(name)`** — module-level convenience functions that delegate to `wod.active_character.gate(...)`. Used by the shorthand compiler output, since the compiler doesn't know which character variable the author is using.
+
+In single-PC games, `wod.active_character` is the PC and authors never think about this distinction. In multi-PC games, `wod.set_active(pc)` determines which character the shorthand syntax checks against, while native syntax can target any character directly.
+
+All six comparison operators are supported: `>=`, `<=`, `==`, `!=`, `>`, `<`.
+
+For boolean merits/flaws, `has()` is used — `pc.has("Avatar Companion")` returns True/False.
+
 ### Supported Conditions
 
-| Syntax | Meaning |
-|--------|---------|
-| `[Forces >= 3]` | Trait check |
-| `[quintessence >= 5]` | Resource check |
-| `[Forces >= 3, Prime >= 2]` | Combined (AND) |
-| `>=`, `<=`, `==`, `!=`, `>`, `<` | All comparisons |
-| `[Avatar Companion]` | Boolean merit check |
-| `[!Blind]` | Negated flaw check |
+| Shorthand | Compiles To |
+|-----------|-------------|
+| `[Forces >= 3]` | `if pc.gate("Forces", ">=", 3)` |
+| `[Forces >= 3, Prime >= 2]` | `if pc.gate("Forces", ">=", 3) and pc.gate("Prime", ">=", 2)` |
+| `[quintessence >= 5]` | `if pc.gate("quintessence", ">=", 5)` |
+| `[Forces == 3]` | `if pc.gate("Forces", "==", 3)` |
+| `[Avatar Companion]` | `if pc.has("Avatar Companion")` |
+| `[!Blind]` | `if not pc.has("Blind")` |
 
 ### Outcome Modification
 
@@ -224,10 +285,10 @@ The same stats that gate a choice can further branch the outcome:
 
 ```renpy
 label rewrite_ward:
-    if pc.check("Forces", 5):
+    if pc.gate("Forces", ">=", 5):
         "Your mastery of Forces lets you not just rewrite the ward, but improve it."
         $ pc.gain("quintessence", 2)
-    elif pc.check("Forces", 4):
+    elif pc.gate("Forces", ">=", 4):
         "You carefully rewrite the ward's structure."
     else:
         "You manage to alter the ward, but it's rough work."
@@ -236,27 +297,35 @@ label rewrite_ward:
 
 ### Hidden vs. Visible Gating
 
-By default, choices the PC doesn't qualify for are **hidden**. Authors can optionally show them greyed-out:
+By default, choices the PC doesn't qualify for are **hidden**. Authors can optionally show them greyed-out using a separate annotation:
 
 ```renpy
-"Rewrite the ward's resonance" [Prime >= 3, Forces >= 2, show_locked="You lack the knowledge..."]:
+"Rewrite the ward's resonance" [Prime >= 3, Forces >= 2] (locked="You lack the knowledge..."):
 ```
 
+The `(locked=...)` annotation is separate from the condition brackets, keeping condition syntax pure.
+
 ## Section 4: Character Definition & Creation
+
+### Templates vs. Character Files
+
+- **Templates** live in `splats/<splat>/templates/` and define character blueprints — starting stat distributions, valid ranges, and defaults. Used by chargen and as a base for pre-defined characters.
+- **Character files** live in the author's story directory (e.g., `game/my_story/characters/`) and define specific characters with concrete stat values. They reference a template via `schema` and `template` fields.
 
 ### Pre-defined Characters (Data Files)
 
 ```yaml
-# splats/mage/templates/default_mage.yaml
+# game/my_story/characters/elena.yaml
 schema: mage
+template: default_mage
 character_type: pc
 
 identity:
-  name: ""
-  tradition: ""
-  essence: ""
-  nature: ""
-  demeanor: ""
+  name: "Elena Vasquez"
+  tradition: "Virtual Adepts"
+  essence: "Dynamic"
+  nature: "Visionary"
+  demeanor: "Architect"
 
 traits:
   attributes:
@@ -279,6 +348,12 @@ traits:
     Forces: 3
     Prime: 2
     Correspondence: 1
+  arete:
+    Arete: 3
+  backgrounds:
+    Avatar: 3
+    Node: 2
+    Resources: 2
 
 resources:
   quintessence: 5
@@ -292,24 +367,32 @@ merits_flaws:
 ### Loading in Script
 
 ```renpy
-$ pc = wod.load_character("my_story/elena.yaml")
-$ mentor = wod.load_character("my_story/npcs/mentor.yaml")
+label start:
+    $ pc = wod.load_character("my_story/characters/elena.yaml")
+    $ mentor = wod.load_character("my_story/characters/npcs/mentor.yaml")
 ```
 
 ### Character Creation (Opt-in)
 
+Character creation is a UI flow that runs during gameplay (after `label start`), not during init. Internally, `wod.chargen()` uses `renpy.call_screen()` in a loop to walk through each chargen step, collecting input and returning the completed character object:
+
 ```renpy
-$ pc = wod.chargen("mage")
+label start:
+    "Welcome to the Chronicle."
+    $ pc = wod.chargen("mage")
+    # Internally calls renpy.call_screen() for each step, returns character object
+    "Your journey begins..."
 ```
 
-Launches a screen flow driven by the schema:
+The chargen screen flow is driven by the splat manifest's `chargen_steps`:
 1. Identity (name, tradition, essence)
 2. Attributes (priority pick + dot allocation)
 3. Abilities (dot allocation)
-4. Spheres (limited by Arete)
-5. Backgrounds, Merits/Flaws
-6. Resources (auto-calculated)
-7. Review & confirm
+4. Spheres (limited by Arete — enforced by trait constraints)
+5. Backgrounds
+6. Merits/Flaws
+7. Resources (auto-calculated)
+8. Review & confirm
 
 Authors can customize:
 
@@ -325,6 +408,8 @@ $ pc.set("Science", 5)
 $ pc.set("Spirit", 1)
 $ pc.advance("Forces")  # increments by 1
 ```
+
+All changes are validated against schema ranges and trait constraints.
 
 ## Section 5: Splat Plugin Structure
 
@@ -366,8 +451,9 @@ init python:
 
 - `loader.py` scans `splats/` for `manifest.yaml` files.
 - Each manifest registers its schema and resources with the core engine.
-- Multiple splats can be loaded simultaneously for crossover stories.
+- Multiple splats can be loaded simultaneously for crossover stories. Each character is assigned to a specific splat via its `schema` field. Trait name collisions across splats are scoped to the character's splat — a Mage character validates against the Mage schema, a Vampire character against the Vampire schema. Characters cannot have traits from multiple schemas.
 - Community splats go in `splats/custom/` following the same structure.
+- Multi-splat crossover mechanics (e.g., cross-splat interactions) are out of scope for v1.
 
 ### Author-Level Overrides
 
@@ -398,22 +484,24 @@ init python:
 ```
 themes/
 ├── gothic/
-│   ├── theme.yaml
-│   ├── gui.rpy
-│   ├── screens.rpy
+│   ├── theme.yaml          # Color palette, font config, style vars
+│   ├── screens.rpy         # Themed screen implementations
 │   ├── fonts/
 │   └── images/
 │       ├── ui/
 │       └── backgrounds/
 └── neutral/
     ├── theme.yaml
-    ├── gui.rpy
     ├── screens.rpy
     ├── fonts/
     └── images/
 ```
 
-### Theme Selection
+### Theme and GUI Integration
+
+The root `gui.rpy` delegates to the active theme. It reads the selected theme's `theme.yaml` and sets Ren'Py GUI variables (colors, fonts, sizes) accordingly. Theme-specific `screens.rpy` files provide styled implementations of the framework screens.
+
+Theme selection happens at init time and is not hot-swappable during gameplay:
 
 ```renpy
 init python:
@@ -449,30 +537,45 @@ Custom themes follow the same directory structure. The framework falls back to `
 
 ## Section 7: Custom Syntax Compiler
 
-### How It Works
+### Architecture
 
-1. At `python early` init, `syntax.py` scans all `.rpy` files for the bracket pattern.
-2. Compiles shorthand into native Ren'Py conditions:
+The shorthand syntax is implemented as a **two-phase system** to resolve the timing constraint that Ren'Py's `python early` phase runs before splat schemas are loaded:
 
-| Shorthand | Compiles To |
-|-----------|-------------|
-| `[Forces >= 3]` | `if pc.check("Forces", 3)` |
-| `[Forces >= 3, Prime >= 2]` | `if pc.check("Forces", 3) and pc.check("Prime", 2)` |
-| `[quintessence >= 5]` | `if pc.resource("quintessence") >= 5` |
-| `[Avatar Companion]` | `if pc.has_merit("Avatar Companion")` |
-| `[!Blind]` | `if not pc.has_flaw("Blind")` |
+**Phase 1 — Source Transform (python early):** `syntax.py` scans `.rpy` files and performs a schema-agnostic textual transform. It does not need to know whether "Forces" is a trait, resource, or merit — it just converts bracket syntax into generic `wod.gate()` calls.
 
-3. The compiler distinguishes traits vs. resources vs. merits by checking the loaded schema.
-4. Unknown identifiers raise a clear error at startup:
+**Phase 2 — Validation (init python):** After splat schemas are loaded, the framework runs a validation pass over all registered gate calls. This is where unknown identifiers are caught and "did you mean?" errors are raised.
+
+### Registration via CDS
+
+`wod_statements.rpy` uses Ren'Py's Creator-Defined Statements (CDS) API to register the framework's custom syntax handling. This is the idiomatic Ren'Py mechanism for extending the scripting language.
+
+### Compilation Table
+
+| Shorthand | Phase 1 Output |
+|-----------|----------------|
+| `[Forces >= 3]` | `if wod.gate("Forces", ">=", 3)` |
+| `[Forces >= 3, Prime >= 2]` | `if wod.gate("Forces", ">=", 3) and wod.gate("Prime", ">=", 2)` |
+| `[quintessence >= 5]` | `if wod.gate("quintessence", ">=", 5)` |
+| `[Forces == 3]` | `if wod.gate("Forces", "==", 3)` |
+| `[Avatar Companion]` | `if wod.has("Avatar Companion")` |
+| `[!Blind]` | `if not wod.has("Blind")` |
+
+At runtime, `wod.gate()` dispatches to the appropriate system (trait check, resource check) based on the loaded schema. `wod.has()` checks merits/flaws.
+
+### Validation Errors
+
+After schemas load, the framework validates all gate/has calls encountered during source transform:
 
 ```
-WoD Syntax Error (script.rpy:45): Unknown trait "Forcs" in gate condition.
+WoD Validation Error (script.rpy:45): Unknown identifier "Forcs" in gate condition.
 Did you mean "Forces"?
 ```
 
+These errors appear at game startup before any scene plays.
+
 ### Limitation
 
-The shorthand only works in `.rpy` files (static source transform). For dynamically generated menus from Python, authors use the native `pc.check()` API.
+The shorthand only works in `.rpy` files (static source transform). For dynamically generated menus from Python, authors use the native `pc.gate()` / `pc.has()` API.
 
 ## Section 8: Data Flow & Lifecycle
 
@@ -481,18 +584,22 @@ The shorthand only works in `.rpy` files (static source transform). For dynamica
 ```
 1. Ren'Py starts
 2. python early:
-   └── syntax.py scans .rpy files, compiles bracket shorthand -> native Ren'Py
+   └── syntax.py scans .rpy files
+       └── Compiles bracket shorthand -> generic wod.gate()/wod.has() calls
+       └── (No schema knowledge needed — pure textual transform)
 3. init python:
    ├── wod_core engine initializes
    ├── loader.py discovers and loads splat(s)
    │   ├── Parses manifest.yaml
-   │   ├── Registers schema
-   │   └── Registers resources
-   ├── Theme loads
+   │   ├── Registers schema (traits, constraints)
+   │   └── Registers resources (pools, links)
+   ├── Validation pass: checks all gate()/has() identifiers against loaded schemas
+   ├── Theme loads (gui.rpy reads theme.yaml, sets Ren'Py GUI vars)
    └── Author's init code runs
-       ├── wod.load_character() or wod.chargen() for PC
-       └── wod.load_character() for NPCs
+       └── wod.load_character() for NPCs if desired
 4. Game starts -> label start:
+   ├── Author loads/creates PC (wod.load_character or wod.chargen)
+   └── Story begins
 ```
 
 ### Play Loop
@@ -503,9 +610,8 @@ Scene plays (dialogue, narration)
 Menu encountered
     |
 Gating system evaluates each choice:
-    ├── Check traits against schema
-    ├── Check resources against pools
-    ├── Check merits/flaws
+    ├── wod.gate() dispatches to trait or resource check
+    ├── wod.has() checks merits/flaws
     └── Filter: show, hide, or grey-out each option
     |
 Player picks a visible/available choice
@@ -513,6 +619,7 @@ Player picks a visible/available choice
 Outcome label runs:
     ├── May branch further on stat values
     ├── May modify traits (pc.set, pc.advance)
+    │   └── Trait constraints enforced
     ├── May spend/gain resources (pc.spend, pc.gain)
     │   └── Resource links enforce constraints
     └── UI updates automatically (HUD, toasts)
@@ -526,16 +633,18 @@ Next scene
 - Schema and resource definitions stay in YAML, reloaded on game start.
 - Saving: Ren'Py snapshots the character objects automatically.
 - Loading: Ren'Py restores them, framework re-validates against current schema.
+- Save migration across schema changes (renamed traits, changed ranges) is out of scope for v1. Authors should treat released schema as stable.
 
 ### Multi-PC Flow (Opt-in)
 
 ```renpy
-$ pc = wod.load_character("elena.yaml")
-$ npc_mentor = wod.load_character("npcs/mentor.yaml")
+label start:
+    $ pc = wod.load_character("elena.yaml")
+    $ npc_mentor = wod.load_character("npcs/mentor.yaml")
 
-# Switch active character for gating purposes
-$ wod.set_active(pc)
+    # Switch active character for gating purposes
+    $ wod.set_active(pc)
 
-# Or gate on a specific character
-"Ask Marcus to ward the room" if npc_mentor.check("Prime", 3):
+    # Or gate on a specific character
+    "Ask Marcus to ward the room" if npc_mentor.gate("Prime", ">=", 3):
 ```

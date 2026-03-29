@@ -1,4 +1,14 @@
+# Python
 __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
+
+# Ren'Py compiled/cache
+*.rpyc
+*.rpyb
+game/cache/
+game/saves/
+game/log.txt
+game/traceback.txt
+game/tmp/

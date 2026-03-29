@@ -1,0 +1,48 @@
+# Demo character: Elena Vasquez, Virtual Adept
+# Forces 3, Prime 2, Technology 3, Awareness 2 — all demo branches are reachable.
+schema: mage
+template: default_mage
+character_type: pc
+
+identity:
+  name: "Elena Vasquez"
+  tradition: "Virtual Adepts"
+  essence: "Dynamic"
+  nature: "Visionary"
+  demeanor: "Architect"
+
+traits:
+  attributes:
+    Strength: 2
+    Dexterity: 3
+    Stamina: 2
+    Charisma: 3
+    Manipulation: 2
+    Appearance: 2
+    Perception: 4
+    Intelligence: 3
+    Wits: 3
+  abilities:
+    Awareness: 2
+    Occult: 3
+    Research: 2
+    Science: 4
+    Technology: 3
+  spheres:
+    Forces: 3
+    Prime: 2
+    Correspondence: 1
+  arete:
+    Arete: 3
+  backgrounds:
+    Avatar: 3
+    Node: 2
+    Resources: 2
+
+resources:
+  quintessence: 5
+  paradox: 0
+  willpower: 6
+
+merits_flaws:
+  - { name: "Avatar Companion", type: merit, value: 3 }

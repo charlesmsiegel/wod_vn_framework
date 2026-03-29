@@ -42,3 +42,41 @@ class TestModuleLevelAPI:
         wod_core.set_active(None)
         with pytest.raises(RuntimeError, match="No active character"):
             wod_core.has("Something")
+
+
+import os
+
+GAME_DIR = os.path.join(os.path.dirname(__file__), "..", "game")
+
+
+class TestModuleLoadAPI:
+    """Test wod_core.load_splat() and wod_core.load_character()."""
+
+    def test_load_splat(self):
+        wod_core.init(GAME_DIR)
+        wod_core.load_splat("mage")
+        assert "mage" in wod_core.get_loader().loaded_splats
+
+    def test_load_character(self, tmp_path):
+        wod_core.init(GAME_DIR)
+        wod_core.load_splat("mage")
+
+        char_yaml = tmp_path / "pc.yaml"
+        char_yaml.write_text("""
+schema: mage
+template: default_mage
+character_type: pc
+identity:
+  name: "Test"
+traits:
+  arete:
+    Arete: 3
+  spheres:
+    Forces: 2
+resources:
+  quintessence: 5
+merits_flaws: []
+""")
+        char = wod_core.load_character(str(char_yaml))
+        assert char.get("Forces") == 2
+        assert char.resources.current("quintessence") == 5

@@ -141,7 +141,12 @@ class TestCharacter:
 
 
 class TestTraitConstraints:
-    """Test max_linked constraint (Spheres capped by Arete)."""
+    """Test max_linked constraint (Spheres capped by Arete).
+
+    Design note: constraints are enforced by set() and advance() only.
+    Character.__init__ is intentionally lenient so saves can be loaded without
+    regard to trait-application order.
+    """
 
     def test_sphere_within_arete_allowed(self, mage_schema_data):
         schema = Schema(mage_schema_data)

@@ -33,3 +33,19 @@ def load_all_splats():
 
 def load_character(char_path: str):
     return get_loader().load_character(char_path)
+
+
+def show_hud(resources=None):
+    """Show the resource HUD. Call from within Ren'Py only."""
+    import renpy
+    renpy.store.wod_hud_visible = True
+    renpy.store.wod_hud_resources = resources
+    renpy.show_screen("resource_hud")
+
+
+def hide_hud():
+    """Hide the resource HUD. Call from within Ren'Py only."""
+    import renpy
+    renpy.store.wod_hud_visible = False
+    renpy.store.wod_hud_resources = None
+    renpy.hide_screen("resource_hud")

@@ -16,3 +16,13 @@ splat:
       - backgrounds
       - merits_flaws
       - review
+  # Tab configuration for the character sheet overlay
+  # "categories: []" means the special Merits & Resources tab
+  character_sheet:
+    tabs:
+      - name: "Attributes & Abilities"
+        categories: [attributes, abilities]
+      - name: "Spheres & Backgrounds"
+        categories: [arete, spheres, backgrounds]
+      - name: "Merits & Resources"
+        categories: []

@@ -21,8 +21,8 @@ def get_loader() -> SplatLoader:
     return _loader
 
 
-def load_splat(splat_id: str):
-    return get_loader().load_splat(splat_id)
+def load_splat(splat_id: str, overrides: str | None = None):
+    return get_loader().load_splat(splat_id, overrides=overrides)
 
 
 def load_all_splats():
@@ -49,6 +49,20 @@ def hide_hud():
     renpy.store.wod_hud_visible = False
     renpy.store.wod_hud_resources = None
     renpy.hide_screen("resource_hud")
+
+
+class _Config:
+    """Framework configuration."""
+    show_gate_toasts = False
+    gate_toast_format = "{trait} {value} — {result}"
+
+config = _Config()
+
+
+def show_toast(message: str, duration: float = 2.0):
+    """Show a brief toast notification. Call from within Ren'Py only."""
+    import renpy
+    renpy.show_screen("wod_toast", message=message, duration=duration)
 
 
 def chargen(splat_id: str, mode: str = "full", preset: dict | None = None):

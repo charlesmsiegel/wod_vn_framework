@@ -42,7 +42,7 @@ class SplatLoader:
                 splat_ids.append(name)
         return splat_ids
 
-    def load_splat(self, splat_id: str) -> SplatData:
+    def load_splat(self, splat_id: str, overrides: str | None = None) -> SplatData:
         splat_dir = os.path.join(self.splats_dir, splat_id)
         manifest_path = os.path.join(splat_dir, "manifest.yaml")
 

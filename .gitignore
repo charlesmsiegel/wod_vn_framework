@@ -12,3 +12,4 @@ game/saves/
 game/log.txt
 game/traceback.txt
 game/tmp/
+.superpowers/

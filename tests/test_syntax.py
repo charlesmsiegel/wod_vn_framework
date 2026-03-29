@@ -1,4 +1,7 @@
 # tests/test_syntax.py
+import os
+import subprocess
+
 from wod_core.syntax import transform_line, parse_condition, validate_identifiers, clear_identifiers
 
 
@@ -118,3 +121,46 @@ class TestValidateIdentifiers:
 
         errors = validate_identifiers(schema, resource_names=[])
         assert "Forces" in errors[0]
+
+
+class TestCLIPreprocessor:
+    """Test the bracket shorthand CLI tool."""
+
+    def test_transform_file(self, tmp_path):
+        src = tmp_path / "test_script.rpy"
+        src.write_text('''menu:
+    "Cast spell" [Forces >= 3]:
+        jump cast
+    "Run away":
+        jump flee
+''')
+        result = subprocess.run(
+            ["python", "-m", "wod_core", str(src)],
+            capture_output=True, text=True,
+            cwd=os.path.join(os.path.dirname(__file__), "..", "game"),
+        )
+        assert result.returncode == 0
+        transformed = src.read_text()
+        assert 'wod_core.gate("Forces", ">=", 3)' in transformed
+        assert '"Run away":' in transformed
+
+    def test_transform_file_dry_run(self, tmp_path):
+        src = tmp_path / "test_script.rpy"
+        original = '    "Cast" [Forces >= 3]:\n'
+        src.write_text(original)
+        result = subprocess.run(
+            ["python", "-m", "wod_core", "--dry-run", str(src)],
+            capture_output=True, text=True,
+            cwd=os.path.join(os.path.dirname(__file__), "..", "game"),
+        )
+        assert result.returncode == 0
+        assert src.read_text() == original  # unchanged
+        assert 'wod_core.gate("Forces", ">=", 3)' in result.stdout
+
+    def test_no_args_prints_usage(self):
+        result = subprocess.run(
+            ["python", "-m", "wod_core"],
+            capture_output=True, text=True,
+            cwd=os.path.join(os.path.dirname(__file__), "..", "game"),
+        )
+        assert result.returncode != 0 or "Usage" in result.stderr or "Usage" in result.stdout

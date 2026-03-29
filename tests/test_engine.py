@@ -1,4 +1,6 @@
 # tests/test_engine.py
+import pickle
+
 from wod_core.engine import Schema, Character
 from wod_core.resources import ResourceManager
 import pytest
@@ -261,3 +263,47 @@ class TestCategoryDefGroups:
         attrs = schema.categories["attributes"]
         assert len(attrs.trait_names) == 9
         assert "Strength" in attrs.trait_names
+
+
+class TestCharacterSerialization:
+    """Test Character pickle round-trip (for Ren'Py save/load)."""
+
+    def test_pickle_round_trip(self, mage_schema_data):
+        from wod_core.resources import ResourceManager
+        schema = Schema(mage_schema_data)
+        char = Character(schema, traits={"Strength": 3, "Arete": 3, "Forces": 2},
+                        merits_flaws=[{"name": "Test", "type": "merit", "value": 1}],
+                        identity={"name": "Pickle Test"})
+        char.resources = ResourceManager({
+            "resources": {"willpower": {"range": [0, 10], "default_max": 5, "default_current": "max"}},
+            "resource_links": {},
+        })
+
+        data = pickle.dumps(char)
+        restored = pickle.loads(data)
+
+        assert restored.get("Strength") == 3
+        assert restored.get("Forces") == 2
+        assert restored.identity["name"] == "Pickle Test"
+        assert restored.has("Test")
+        assert restored.resources.current("willpower") == 5
+
+    def test_pickle_excludes_schema(self, mage_schema_data):
+        schema = Schema(mage_schema_data)
+        char = Character(schema, traits={"Strength": 3})
+
+        state = char.__getstate__()
+        assert "schema" not in state
+        assert "_schema_data" in state
+
+    def test_pickle_restores_schema(self, mage_schema_data):
+        schema = Schema(mage_schema_data)
+        char = Character(schema, traits={"Strength": 3})
+
+        data = pickle.dumps(char)
+        restored = pickle.loads(data)
+
+        # Schema should be reconstructed
+        assert restored.schema is not None
+        assert restored.schema.has_trait("Strength")
+        assert restored.gate("Strength", ">=", 3) is True

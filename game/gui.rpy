@@ -26,10 +26,10 @@ define config.check_conflicting_properties = True
 
 ## An accent color used throughout the interface to label and highlight
 ## text.
-define gui.accent_color = "#c9a96e"
+define gui.accent_color = "#b8860b"
 
 ## The color used for a text button when it is neither selected nor hovered.
-define gui.idle_color = "#888888"
+define gui.idle_color = "#8a7e6c"
 
 ## The small color is used for small text, which needs to be
 ## brighter/darker to achieve the same effect.
@@ -43,46 +43,46 @@ define gui.hover_color = Color(gui.accent_color).tint(.6)
 define gui.selected_color = "#ffffff"
 
 ## The color used for a text button when it cannot be selected.
-define gui.insensitive_color = "#55555580"
+define gui.insensitive_color = "#4a4a4a80"
 
 ## Colors used for the portions of bars that are not filled in. These are
 ## not used directly, but are used when re-generating bar image files.
-define gui.muted_color = "#2a2a3e"
-define gui.hover_muted_color = "#3a3a52"
+define gui.muted_color = "#1a1a28"
+define gui.hover_muted_color = "#2a2a3e"
 
 ## The colors used for dialogue and menu choice text.
-define gui.text_color = "#e0e0e0"
-define gui.interface_text_color = "#e0e0e0"
+define gui.text_color = "#d4c5a9"
+define gui.interface_text_color = "#d4c5a9"
 
 
 ## Fonts and Font Sizes ########################################################
 
 ## The font used for in-game text.
-define gui.text_font = "DejaVuSans.ttf"
+define gui.text_font = "gui/fonts/EBGaramond-Regular.ttf"
 
 ## The font used for character names.
-define gui.name_text_font = "DejaVuSans.ttf"
+define gui.name_text_font = "gui/fonts/Cinzel-Regular.ttf"
 
 ## The font used for out-of-game text.
-define gui.interface_text_font = "DejaVuSans.ttf"
+define gui.interface_text_font = "gui/fonts/Cinzel-Regular.ttf"
 
 ## The size of normal dialogue text.
-define gui.text_size = gui.scale(22)
+define gui.text_size = gui.scale(28)
 
 ## The size of character names.
-define gui.name_text_size = gui.scale(30)
+define gui.name_text_size = gui.scale(32)
 
 ## The size of text in the game's user interface.
-define gui.interface_text_size = gui.scale(22)
+define gui.interface_text_size = gui.scale(28)
 
 ## The size of labels in the game's user interface.
-define gui.label_text_size = gui.scale(24)
+define gui.label_text_size = gui.scale(32)
 
 ## The size of text on the notify screen.
-define gui.notify_text_size = gui.scale(16)
+define gui.notify_text_size = gui.scale(22)
 
 ## The size of the game's title.
-define gui.title_text_size = gui.scale(50)
+define gui.title_text_size = gui.scale(56)
 
 
 ## Main and Game Menus #########################################################

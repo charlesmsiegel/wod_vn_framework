@@ -190,6 +190,45 @@ class Character:
             raise ValueError(f"Unknown operator: {op!r}")
         return self._OPERATORS[op](current, value)
 
+    def __getstate__(self):
+        """Exclude Schema object from pickle — store raw data instead."""
+        state = self.__dict__.copy()
+        # Schema is large and reconstructable — store the raw data instead
+        if "schema" in state:
+            schema = state.pop("schema")
+            # Reconstruct the data dict from the Schema object
+            schema_data: dict = {"trait_categories": {}, "trait_constraints": []}
+            for cat_name, cat in schema.categories.items():
+                cat_data: dict = {
+                    "display_name": cat.display_name,
+                    "range": list(cat.range),
+                    "default": cat.default,
+                }
+                if cat.groups is not None:
+                    cat_data["groups"] = {k: list(v) for k, v in cat.groups.items()}
+                else:
+                    cat_data["traits"] = list(cat.trait_names)
+                schema_data["trait_categories"][cat_name] = cat_data
+            for constraint in schema.constraints:
+                if isinstance(constraint, MaxLinkedConstraint):
+                    schema_data["trait_constraints"].append({
+                        "type": "max_linked",
+                        "target_category": constraint.target_category,
+                        "limited_by": constraint.limited_by,
+                        "rule": constraint.rule,
+                    })
+            state["_schema_data"] = schema_data
+        return state
+
+    def __setstate__(self, state):
+        """Reconstruct Schema from stored raw data."""
+        schema_data = state.pop("_schema_data", None)
+        self.__dict__.update(state)
+        if schema_data:
+            self.schema = Schema(schema_data)
+        else:
+            self.schema = None
+
     def spend(self, name: str, amount: int) -> bool:
         if self.resources is None:
             raise RuntimeError("No resources configured for this character")

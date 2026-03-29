@@ -31,14 +31,14 @@ screen character_sheet():
     frame:
         xfill True
         yfill True
-        background "#000000AA"
+        background "#0a0814CC"
 
         frame:
             xalign 0.5
             yalign 0.5
             xsize int(config.screen_width * 0.8)
             ysize int(config.screen_height * 0.85)
-            background "#1a1a2eEE"
+            background "#100d1cEE"
             padding (30, 20, 30, 20)
 
             vbox:
@@ -49,7 +49,7 @@ screen character_sheet():
                     xfill True
                     $ identity_parts = [str(v) for k, v in pc.identity.items() if v]
                     $ identity_text = " — ".join(identity_parts)
-                    text "[identity_text]" size 24 color "#c9a96e"
+                    text "[identity_text]" size 24 color "#b8860b"
                     null width 0 xfill True
                     textbutton "\u2715" action Hide("character_sheet") text_size 24 text_color "#888888" text_hover_color "#ffffff"
 
@@ -58,7 +58,7 @@ screen character_sheet():
                     spacing 10
                     for i, tab in enumerate(tab_config):
                         if i == current_tab:
-                            textbutton tab["name"] text_size 16 text_color "#c9a96e" text_underline True action SetScreenVariable("current_tab", i)
+                            textbutton tab["name"] text_size 16 text_color "#b8860b" text_underline True action SetScreenVariable("current_tab", i)
                         else:
                             textbutton tab["name"] text_size 16 text_color "#888888" action SetScreenVariable("current_tab", i)
 
@@ -83,7 +83,7 @@ screen character_sheet():
                                 for cat_name in cats:
                                     if cat_name in schema.categories:
                                         $ cat = schema.categories[cat_name]
-                                        text cat.display_name size 20 color "#c9a96e"
+                                        text cat.display_name size 20 color "#b8860b"
                                         null height 5
 
                                         if cat.groups is not None:
@@ -101,7 +101,7 @@ screen character_sheet():
                                                                 spacing 3
                                                                 for d in range(max_val):
                                                                     if d < val:
-                                                                        text "\u25cf" size 14 color "#c9a96e"
+                                                                        text "\u25cf" size 14 color "#b8860b"
                                                                     else:
                                                                         text "\u25cb" size 14 color "#444444"
                                                 null height 5
@@ -117,14 +117,14 @@ screen character_sheet():
                                                             spacing 3
                                                             for d in range(max_val):
                                                                 if d < val:
-                                                                    text "\u25cf" size 14 color "#c9a96e"
+                                                                    text "\u25cf" size 14 color "#b8860b"
                                                                 else:
                                                                     text "\u25cb" size 14 color "#444444"
                                         null height 10
                             else:
                                 # Merits & Resources tab
                                 if pc.merits_flaws:
-                                    text "Merits & Flaws" size 20 color "#c9a96e"
+                                    text "Merits & Flaws" size 20 color "#b8860b"
                                     null height 5
                                     for mf in pc.merits_flaws:
                                         hbox:
@@ -137,7 +137,7 @@ screen character_sheet():
                                                 text "[mf_val]" size 12 color "#888888"
                                     null height 10
 
-                                text "Resources" size 20 color "#c9a96e"
+                                text "Resources" size 20 color "#b8860b"
                                 null height 5
                                 $ res = pc.resources
                                 if res is not None:

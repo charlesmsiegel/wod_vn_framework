@@ -149,3 +149,55 @@ merits_flaws: []
 
         assert char.resources.current("willpower") == 8
         assert char.resources.pools["willpower"].max == 8
+
+
+class TestSplatOverrides:
+    """Test load_splat with author-level overrides."""
+
+    def test_override_resource_range(self, tmp_path):
+        override_yaml = tmp_path / "overrides.yaml"
+        override_yaml.write_text("""
+extends: mage
+overrides:
+  resources:
+    quintessence:
+      range: [0, 30]
+""")
+        loader = SplatLoader(GAME_DIR)
+        splat = loader.load_splat("mage", overrides=str(override_yaml))
+        assert splat.resource_config["resources"]["quintessence"]["range"] == [0, 30]
+        # Other resources unchanged
+        assert splat.resource_config["resources"]["paradox"]["range"] == [0, 20]
+
+    def test_override_append_ability(self, tmp_path):
+        override_yaml = tmp_path / "overrides.yaml"
+        override_yaml.write_text("""
+extends: mage
+overrides:
+  trait_categories:
+    abilities:
+      skills:
+        append: [Hypertech]
+""")
+        loader = SplatLoader(GAME_DIR)
+        splat = loader.load_splat("mage", overrides=str(override_yaml))
+        assert splat.schema.has_trait("Hypertech")
+        # Existing traits still present
+        assert splat.schema.has_trait("Technology")
+
+
+class TestTemplateExtension:
+    """Test template extends/overrides mechanism."""
+
+    def test_archmage_extends_default(self):
+        loader = SplatLoader(GAME_DIR)
+        splat = loader.load_splat("mage")
+
+        # archmage.yaml extends default_mage with sphere range [0, 10]
+        char = loader.load_character_from_template(
+            "mage", "templates/archmage.yaml",
+            identity_override={"name": "Archmaster"}
+        )
+        # Archmage should allow spheres up to 10
+        assert char.schema.get_range("Forces") == (0, 10)
+        assert char.identity["name"] == "Archmaster"

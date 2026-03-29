@@ -37,18 +37,20 @@ def load_character(char_path: str):
 
 def show_hud(resources=None):
     """Show the resource HUD. Call from within Ren'Py only."""
+    import renpy.exports as renpy_api
     import renpy
     renpy.store.wod_hud_visible = True
     renpy.store.wod_hud_resources = resources
-    renpy.show_screen("resource_hud")
+    renpy_api.show_screen("resource_hud")
 
 
 def hide_hud():
     """Hide the resource HUD. Call from within Ren'Py only."""
+    import renpy.exports as renpy_api
     import renpy
     renpy.store.wod_hud_visible = False
     renpy.store.wod_hud_resources = None
-    renpy.hide_screen("resource_hud")
+    renpy_api.hide_screen("resource_hud")
 
 
 class _Config:
@@ -61,8 +63,8 @@ config = _Config()
 
 def show_toast(message: str, duration: float = 2.0):
     """Show a brief toast notification. Call from within Ren'Py only."""
-    import renpy
-    renpy.show_screen("wod_toast", message=message, duration=duration)
+    import renpy.exports as renpy_api
+    renpy_api.show_screen("wod_toast", message=message, duration=duration)
 
 
 def chargen(splat_id: str, mode: str = "full", preset: dict | None = None):
@@ -70,7 +72,7 @@ def chargen(splat_id: str, mode: str = "full", preset: dict | None = None):
 
     Returns a Character on success, or None if the player cancels.
     """
-    import renpy
+    import renpy.exports as renpy_api
     from wod_core.chargen import ChargenState, build_character
 
     loader = get_loader()
@@ -94,7 +96,7 @@ def chargen(splat_id: str, mode: str = "full", preset: dict | None = None):
         step_name = state.steps[state.current_step]
         screen_name = f"chargen_{step_name}"
 
-        result = renpy.call_screen(screen_name, state=state)
+        result = renpy_api.call_screen(screen_name, state=state)
 
         if result is None or result.get("action") == "cancel":
             return None

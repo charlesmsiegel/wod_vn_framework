@@ -107,7 +107,7 @@ screen resource_hud():
             null width 0 xfill True
 
             # Character sheet toggle button
-            textbutton "[Sheet]":
+            textbutton "[[Sheet]":
                 yalign 0.5
                 text_size 14
                 text_color "#b8860b"

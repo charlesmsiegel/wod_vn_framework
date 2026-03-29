@@ -237,3 +237,27 @@ class TestCharacterGate:
         char = self._make_char_with_resources(mage_schema_data, mage_resource_data)
         with pytest.raises(ValueError, match="Unknown operator"):
             char.gate("Strength", "~", 3)
+
+
+class TestCategoryDefGroups:
+    """Test that CategoryDef preserves group structure."""
+
+    def test_groups_stored_when_present(self, mage_schema_data):
+        schema = Schema(mage_schema_data)
+        attrs = schema.categories["attributes"]
+        assert attrs.groups is not None
+        assert "physical" in attrs.groups
+        assert attrs.groups["physical"] == ["Strength", "Dexterity", "Stamina"]
+        assert attrs.groups["social"] == ["Charisma", "Manipulation", "Appearance"]
+        assert attrs.groups["mental"] == ["Perception", "Intelligence", "Wits"]
+
+    def test_groups_none_for_flat_traits(self, mage_schema_data):
+        schema = Schema(mage_schema_data)
+        spheres = schema.categories["spheres"]
+        assert spheres.groups is None
+
+    def test_trait_names_still_flat(self, mage_schema_data):
+        schema = Schema(mage_schema_data)
+        attrs = schema.categories["attributes"]
+        assert len(attrs.trait_names) == 9
+        assert "Strength" in attrs.trait_names

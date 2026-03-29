@@ -106,5 +106,7 @@ class SplatLoader:
             if char.resources.has_resource(res_name) and isinstance(res_value, int):
                 pool = char.resources.pools[res_name]
                 pool.current_value = res_value
+                if res_value > pool.max:
+                    pool.max = res_value
 
         return char

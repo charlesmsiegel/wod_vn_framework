@@ -12,9 +12,12 @@ class CategoryDef:
         self.range = tuple(data.get("range", [0, 5]))
         self.default = data.get("default", 0)
         self.trait_names: list[str] = []
+        self.groups: dict[str, list[str]] | None = None
 
         if "groups" in data:
-            for traits in data["groups"].values():
+            self.groups = {}
+            for group_name, traits in data["groups"].items():
+                self.groups[group_name] = list(traits)
                 self.trait_names.extend(traits)
         elif "traits" in data:
             self.trait_names = list(data["traits"])

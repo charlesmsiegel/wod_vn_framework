@@ -8,8 +8,32 @@ from dataclasses import dataclass
 
 import yaml
 
-from wod_core.engine import Schema, Character
+from wod_core.engine import Schema, Character, MaxLinkedConstraint
 from wod_core.resources import ResourceManager
+
+
+def _apply_overrides(schema_data: dict, resource_config: dict, overrides: dict) -> None:
+    """Apply author-level overrides to schema and resource data."""
+    # Override trait categories
+    if "trait_categories" in overrides:
+        for cat_name, cat_overrides in overrides["trait_categories"].items():
+            if cat_name in schema_data.get("trait_categories", {}):
+                cat = schema_data["trait_categories"][cat_name]
+                for key, value in cat_overrides.items():
+                    if isinstance(value, dict) and "append" in value:
+                        # Append to existing list within a group
+                        if "groups" in cat and key in cat["groups"]:
+                            cat["groups"][key].extend(value["append"])
+                        elif "traits" in cat:
+                            cat["traits"].extend(value["append"])
+                    else:
+                        cat[key] = value
+
+    # Override resources
+    if "resources" in overrides:
+        for res_name, res_overrides in overrides["resources"].items():
+            if res_name in resource_config.get("resources", {}):
+                resource_config["resources"][res_name].update(res_overrides)
 
 
 @dataclass
@@ -60,6 +84,15 @@ class SplatLoader:
         templates_dir = os.path.join(
             splat_dir, manifest["splat"].get("templates_dir", "templates")
         )
+
+        # Apply overrides if provided
+        if overrides:
+            if not os.path.isabs(overrides):
+                overrides = os.path.join(self.game_dir, overrides)
+            with open(overrides) as f:
+                override_data = yaml.safe_load(f)
+            if override_data and "overrides" in override_data:
+                _apply_overrides(schema_data, resource_config, override_data["overrides"])
 
         schema = Schema(schema_data)
 

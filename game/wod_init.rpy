@@ -16,3 +16,8 @@ init -10 python:
             "Check your installation."
         )
     wod_core.load_all_splats()
+
+label after_load:
+    if store.wod_hud_visible:
+        show screen resource_hud
+    return

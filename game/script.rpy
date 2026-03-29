@@ -13,6 +13,7 @@ label start:
     ## Load the demo character
     $ pc = wod_core.load_character("demo/elena.yaml")
     $ wod_core.set_active(pc)
+    $ wod_core.show_hud()
 
     scene black with fade
 

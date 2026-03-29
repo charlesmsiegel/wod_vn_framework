@@ -16,7 +16,7 @@ screen resource_hud():
         ysize 60
         xpos 0
         ypos 0
-        background "#0d0d1aCC"
+        background "#0a0814DD"
         padding (20, 8, 20, 8)
 
         hbox:
@@ -44,7 +44,7 @@ screen resource_hud():
                             range combined_max
                             xsize 300
                             ysize 16
-                            left_bar "#c9a96e"
+                            left_bar "#b8860b"
                             right_bar "#333333"
                         bar:
                             value paradox_val
@@ -59,7 +59,7 @@ screen resource_hud():
                         xsize 300
                         $ qt_text = "Qt: {}".format(quint)
                         $ pdx_text = "Pdx: {}".format(paradox_val)
-                        text "[qt_text]" size 12 color "#c9a96e"
+                        text "[qt_text]" size 12 color "#b8860b"
                         null width 0 xfill True
                         text "[pdx_text]" size 12 color "#8b4545"
 
@@ -101,7 +101,7 @@ screen resource_hud():
                                         xsize 14
                                         ysize 14
                                         background "#333333"
-                        text "Health" size 12 color "#5a8a5a"
+                        text "Health" size 12 color "#8a7e6c"
 
             # Spacer pushes sheet button to the right
             null width 0 xfill True
@@ -110,7 +110,7 @@ screen resource_hud():
             textbutton "[Sheet]":
                 yalign 0.5
                 text_size 14
-                text_color "#c9a96e"
+                text_color "#b8860b"
                 text_hover_color "#e0c080"
                 action ToggleScreen("character_sheet")
 

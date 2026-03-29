@@ -167,6 +167,26 @@ class Character:
     def has(self, name: str) -> bool:
         return any(mf["name"] == name for mf in self.merits_flaws)
 
+    _OPERATORS = {
+        ">=": lambda a, b: a >= b,
+        "<=": lambda a, b: a <= b,
+        "==": lambda a, b: a == b,
+        "!=": lambda a, b: a != b,
+        ">": lambda a, b: a > b,
+        "<": lambda a, b: a < b,
+    }
+
+    def gate(self, name: str, op: str, value: int) -> bool:
+        if self.schema.has_trait(name):
+            current = self.get(name)
+        elif self.resources and self.resources.has_resource(name):
+            current = self.resources.current(name)
+        else:
+            raise KeyError(f"Unknown trait or resource: {name!r}")
+        if op not in self._OPERATORS:
+            raise ValueError(f"Unknown operator: {op!r}")
+        return self._OPERATORS[op](current, value)
+
     def spend(self, name: str, amount: int) -> bool:
         if self.resources is None:
             raise RuntimeError("No resources configured for this character")

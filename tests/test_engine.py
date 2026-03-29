@@ -1,5 +1,6 @@
 # tests/test_engine.py
 from wod_core.engine import Schema, Character
+from wod_core.resources import ResourceManager
 import pytest
 
 
@@ -177,3 +178,62 @@ class TestTraitConstraints:
         char.set("Arete", 5)
         char.set("Forces", 5)
         assert char.get("Forces") == 5
+
+
+class TestCharacterGate:
+    """Test Character.gate() dispatching to traits and resources."""
+
+    def _make_char_with_resources(self, mage_schema_data, mage_resource_data):
+        schema = Schema(mage_schema_data)
+        char = Character(schema, traits={"Arete": 3, "Strength": 3, "Forces": 2})
+        char.resources = ResourceManager(mage_resource_data)
+        char.resources.gain("quintessence", 10)
+        return char
+
+    def test_gate_trait_gte_pass(self, mage_schema_data, mage_resource_data):
+        char = self._make_char_with_resources(mage_schema_data, mage_resource_data)
+        assert char.gate("Strength", ">=", 3) is True
+
+    def test_gate_trait_gte_fail(self, mage_schema_data, mage_resource_data):
+        char = self._make_char_with_resources(mage_schema_data, mage_resource_data)
+        assert char.gate("Strength", ">=", 4) is False
+
+    def test_gate_trait_eq(self, mage_schema_data, mage_resource_data):
+        char = self._make_char_with_resources(mage_schema_data, mage_resource_data)
+        assert char.gate("Strength", "==", 3) is True
+        assert char.gate("Strength", "==", 4) is False
+
+    def test_gate_trait_neq(self, mage_schema_data, mage_resource_data):
+        char = self._make_char_with_resources(mage_schema_data, mage_resource_data)
+        assert char.gate("Strength", "!=", 4) is True
+        assert char.gate("Strength", "!=", 3) is False
+
+    def test_gate_trait_lt(self, mage_schema_data, mage_resource_data):
+        char = self._make_char_with_resources(mage_schema_data, mage_resource_data)
+        assert char.gate("Strength", "<", 4) is True
+        assert char.gate("Strength", "<", 3) is False
+
+    def test_gate_trait_gt(self, mage_schema_data, mage_resource_data):
+        char = self._make_char_with_resources(mage_schema_data, mage_resource_data)
+        assert char.gate("Strength", ">", 2) is True
+        assert char.gate("Strength", ">", 3) is False
+
+    def test_gate_trait_lte(self, mage_schema_data, mage_resource_data):
+        char = self._make_char_with_resources(mage_schema_data, mage_resource_data)
+        assert char.gate("Strength", "<=", 3) is True
+        assert char.gate("Strength", "<=", 2) is False
+
+    def test_gate_resource(self, mage_schema_data, mage_resource_data):
+        char = self._make_char_with_resources(mage_schema_data, mage_resource_data)
+        assert char.gate("quintessence", ">=", 5) is True
+        assert char.gate("quintessence", ">=", 15) is False
+
+    def test_gate_unknown_raises(self, mage_schema_data, mage_resource_data):
+        char = self._make_char_with_resources(mage_schema_data, mage_resource_data)
+        with pytest.raises(KeyError, match="Unknown trait or resource"):
+            char.gate("nonexistent", ">=", 1)
+
+    def test_gate_bad_operator_raises(self, mage_schema_data, mage_resource_data):
+        char = self._make_char_with_resources(mage_schema_data, mage_resource_data)
+        with pytest.raises(ValueError, match="Unknown operator"):
+            char.gate("Strength", "~", 3)

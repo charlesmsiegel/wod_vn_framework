@@ -133,10 +133,14 @@ class Character:
                         f"{name} must be between {min_val} and {max_val}, got {value}"
                     )
                 self.traits[name] = value
-            # Constraints are intentionally NOT validated during __init__.
-            # Construction is lenient so existing characters can be loaded from
-            # saves regardless of trait ordering.  Constraints are enforced by
-            # set() and advance() for all subsequent mutations.
+            # Validate all constraints after all traits are set
+            for constraint in self.schema.constraints:
+                for trait_name in self.schema.get_all_trait_names():
+                    ok, msg = constraint.validate(
+                        trait_name, self.traits[trait_name], self, self.schema
+                    )
+                    if not ok:
+                        raise ValueError(msg)
 
     def get(self, name: str) -> int:
         if name not in self.traits:

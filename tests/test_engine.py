@@ -86,9 +86,9 @@ class TestCharacter:
 
     def test_init_with_traits(self, mage_schema_data):
         schema = Schema(mage_schema_data)
-        char = Character(schema, traits={"Strength": 3, "Forces": 2})
+        char = Character(schema, traits={"Strength": 3, "Crafts": 2})
         assert char.get("Strength") == 3
-        assert char.get("Forces") == 2
+        assert char.get("Crafts") == 2
 
     def test_set_valid(self, mage_schema_data):
         schema = Schema(mage_schema_data)

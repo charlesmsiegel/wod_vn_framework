@@ -103,3 +103,29 @@ merits_flaws: []
 
         with pytest.raises(ValueError, match="cannot exceed Arete"):
             loader.load_character(str(char_yaml))
+
+
+class TestResourceMaxFix:
+    """Test that resource overrides update max when current > max."""
+
+    def test_willpower_override_updates_max(self, tmp_path):
+        char_yaml = tmp_path / "wp_test.yaml"
+        char_yaml.write_text("""
+schema: mage
+template: default_mage
+character_type: pc
+identity:
+  name: "WP Test"
+traits:
+  arete:
+    Arete: 1
+resources:
+  willpower: 8
+merits_flaws: []
+""")
+        loader = SplatLoader(GAME_DIR)
+        loader.load_splat("mage")
+        char = loader.load_character(str(char_yaml))
+
+        assert char.resources.current("willpower") == 8
+        assert char.resources.pools["willpower"].max == 8

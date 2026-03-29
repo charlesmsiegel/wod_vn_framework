@@ -1,7 +1,7 @@
 # tests/test_chargen.py
 import os
 import pytest
-from wod_core.chargen import ChargenState, PointPool
+from wod_core.chargen import ChargenState, PointPool, build_character
 from wod_core.loader import SplatLoader
 
 GAME_DIR = os.path.join(os.path.dirname(__file__), "..", "game")
@@ -111,3 +111,61 @@ class TestPointPool:
         pool.reset()
         assert pool.remaining == 7
         assert pool.get_all() == {}
+
+
+class TestBuildCharacter:
+    """Test converting ChargenState into a Character."""
+
+    def test_build_from_full_state(self, mage_splat):
+        state = ChargenState("mage", "full", mage_splat.schema, mage_splat.chargen_config, mage_splat)
+        state.save_step("identity", {
+            "name": "Test Mage",
+            "tradition": "Virtual Adepts",
+            "essence": "Dynamic",
+            "nature": "Visionary",
+            "demeanor": "Architect",
+        })
+        state.save_step("attribute_allocate", {
+            "Strength": 2, "Dexterity": 3, "Stamina": 2,
+            "Charisma": 2, "Manipulation": 3, "Appearance": 1,
+            "Perception": 3, "Intelligence": 4, "Wits": 2,
+        })
+        state.save_step("ability_allocate", {
+            "Technology": 3, "Science": 2, "Computer": 2,
+        })
+        state.save_step("spheres_backgrounds", {
+            "spheres": {"Correspondence": 1, "Forces": 1, "Mind": 1},
+            "backgrounds": {"Avatar": 2, "Node": 1},
+        })
+        state.save_step("freebies", {
+            "trait_additions": {},
+            "merits": [{"name": "Natural Channel", "type": "merit", "value": 3}],
+            "flaws": [],
+        })
+
+        char = build_character(state)
+
+        assert char.identity["name"] == "Test Mage"
+        assert char.get("Strength") == 2
+        assert char.get("Intelligence") == 4
+        assert char.get("Technology") == 3
+        assert char.get("Correspondence") == 1
+        assert char.get("Arete") == 1  # starting arete (default)
+        assert char.has("Natural Channel")
+        assert char.resources is not None
+        assert char.resources.has_resource("quintessence")
+        assert char.resources.has_resource("willpower")
+
+    def test_build_from_template(self, mage_splat):
+        state = ChargenState("mage", "template", mage_splat.schema, mage_splat.chargen_config, mage_splat)
+        state.save_step("identity", {"name": "Elena"})
+        state.save_step("template_pick", {
+            "tradition": "virtual_adepts",
+            "template_file": "templates/va_code_witch.yaml",
+        })
+
+        char = build_character(state)
+
+        assert char.identity["name"] == "Elena"
+        assert char.get("Correspondence") == 3  # from template
+        assert char.resources is not None

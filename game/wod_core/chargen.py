@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
+
+import yaml
+
+from wod_core.engine import Schema, Character
+from wod_core.resources import ResourceManager
 
 
 # Invalidation rules: changing a step invalidates these dependent steps
@@ -105,3 +111,126 @@ class PointPool:
 
     def reset(self) -> None:
         self._allocations.clear()
+
+
+def build_character(state: ChargenState) -> Character:
+    """Convert a completed ChargenState into a Character object."""
+    if state.mode == "template":
+        return _build_from_template(state)
+    return _build_from_allocation(state)
+
+
+def _build_from_allocation(state: ChargenState) -> Character:
+    """Build character from manual allocation data (full or simplified mode)."""
+    identity = dict(state.data.get("identity", {}))
+    mode_config = state.get_mode_config()
+
+    # Start with all traits at defaults
+    flat_traits: dict[str, int] = {}
+    for trait_name in state.schema.get_all_trait_names():
+        flat_traits[trait_name] = state.schema.get_default(trait_name)
+
+    # Apply attribute allocations
+    attr_data = state.data.get("attribute_allocate", {})
+    for trait, value in attr_data.items():
+        if state.schema.has_trait(trait):
+            flat_traits[trait] = value
+
+    # Apply ability allocations
+    ability_data = state.data.get("ability_allocate", state.data.get("abilities", {}))
+    for trait, value in ability_data.items():
+        if state.schema.has_trait(trait):
+            flat_traits[trait] = value
+
+    # Set Arete BEFORE spheres (constraint: no Sphere can exceed Arete)
+    starting_arete = mode_config.get("starting_arete", 1)
+    tradition_id = identity.get("tradition", "")
+    for t in state.get_traditions():
+        if t["name"] == tradition_id or t["id"] == tradition_id:
+            if "starting_arete" in t:
+                starting_arete = t["starting_arete"]
+            break
+    flat_traits["Arete"] = starting_arete
+
+    # Apply sphere and background allocations
+    sb_data = state.data.get("spheres_backgrounds", state.data.get("spheres", {}))
+    if isinstance(sb_data, dict):
+        for sub_key in ("spheres", "backgrounds"):
+            sub_data = sb_data.get(sub_key, {})
+            for trait, value in sub_data.items():
+                if state.schema.has_trait(trait):
+                    flat_traits[trait] = value
+
+    # Apply freebie additions
+    freebie_data = state.data.get("freebies", {})
+    for trait, value in freebie_data.get("trait_additions", {}).items():
+        if state.schema.has_trait(trait):
+            flat_traits[trait] = flat_traits.get(trait, 0) + value
+
+    # Merits/flaws
+    merits_flaws = freebie_data.get("merits", []) + freebie_data.get("flaws", [])
+
+    # Create character
+    char = Character(
+        schema=state.schema,
+        traits=flat_traits,
+        merits_flaws=merits_flaws,
+        identity=identity,
+    )
+
+    # Attach resources
+    char.resources = ResourceManager(state.splat_data.resource_config)
+
+    # Set willpower from freebie if raised
+    wp_bonus = freebie_data.get("trait_additions", {}).get("willpower", 0)
+    if wp_bonus > 0 and char.resources.has_resource("willpower"):
+        pool = char.resources.pools["willpower"]
+        pool.current_value = pool.max + wp_bonus
+        pool.max = pool.current_value
+
+    return char
+
+
+def _build_from_template(state: ChargenState) -> Character:
+    """Build character from a pre-built template file."""
+    identity_data = state.data.get("identity", {})
+    template_data = state.data.get("template_pick", {})
+    template_file = template_data.get("template_file", "")
+
+    # Resolve template path relative to the splat directory
+    # templates_dir is e.g. /path/to/game/splats/mage/templates
+    # template_file is e.g. "templates/va_code_witch.yaml"
+    splat_dir = os.path.dirname(state.splat_data.templates_dir.rstrip("/"))
+    full_path = os.path.join(splat_dir, template_file)
+
+    with open(full_path) as f:
+        char_data = yaml.safe_load(f)
+
+    # Flatten traits
+    flat_traits: dict[str, int] = {}
+    for category_traits in char_data.get("traits", {}).values():
+        if isinstance(category_traits, dict):
+            flat_traits.update(category_traits)
+
+    # Override identity with player's name
+    file_identity = char_data.get("identity", {})
+    if identity_data.get("name"):
+        file_identity["name"] = identity_data["name"]
+
+    char = Character(
+        schema=state.schema,
+        traits=flat_traits,
+        merits_flaws=char_data.get("merits_flaws", []),
+        identity=file_identity,
+    )
+
+    # Attach resources
+    char.resources = ResourceManager(state.splat_data.resource_config)
+    for res_name, res_value in char_data.get("resources", {}).items():
+        if char.resources.has_resource(res_name) and isinstance(res_value, int):
+            pool = char.resources.pools[res_name]
+            pool.current_value = res_value
+            if res_value > pool.max:
+                pool.max = res_value
+
+    return char

@@ -61,3 +61,47 @@ class ChargenState:
 
     def get_essences(self) -> list[str]:
         return self.config.get("essences", [])
+
+
+class PointPool:
+    """Tracks dot allocation within a budget."""
+
+    def __init__(self, total: int, per_trait_max: int = 5):
+        self.total = total
+        self.per_trait_max = per_trait_max
+        self._allocations: dict[str, int] = {}
+
+    @property
+    def spent(self) -> int:
+        return sum(self._allocations.values())
+
+    @property
+    def remaining(self) -> int:
+        return self.total - self.spent
+
+    def allocate(self, trait: str, dots: int) -> bool:
+        current = self._allocations.get(trait, 0)
+        if dots > self.per_trait_max:
+            return False
+        delta = dots - current
+        if delta > self.remaining:
+            return False
+        self._allocations[trait] = dots
+        return True
+
+    def deallocate(self, trait: str, dots: int) -> None:
+        current = self._allocations.get(trait, 0)
+        new_val = max(0, current - dots)
+        if new_val == 0:
+            self._allocations.pop(trait, None)
+        else:
+            self._allocations[trait] = new_val
+
+    def get(self, trait: str) -> int:
+        return self._allocations.get(trait, 0)
+
+    def get_all(self) -> dict[str, int]:
+        return dict(self._allocations)
+
+    def reset(self) -> None:
+        self._allocations.clear()

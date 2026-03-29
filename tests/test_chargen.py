@@ -1,7 +1,7 @@
 # tests/test_chargen.py
 import os
 import pytest
-from wod_core.chargen import ChargenState
+from wod_core.chargen import ChargenState, PointPool
 from wod_core.loader import SplatLoader
 
 GAME_DIR = os.path.join(os.path.dirname(__file__), "..", "game")
@@ -70,3 +70,44 @@ class TestChargenState:
         state.save_step("identity", {"tradition": "Verbena"})
         state.invalidate_dependents("identity")
         assert 5 not in state.completed
+
+
+class TestPointPool:
+    """Test point pool allocation and validation."""
+
+    def test_allocate_within_budget(self):
+        pool = PointPool(total=7, per_trait_max=5)
+        assert pool.allocate("Strength", 3) is True
+        assert pool.allocate("Dexterity", 2) is True
+        assert pool.remaining == 2
+
+    def test_allocate_exceeds_budget(self):
+        pool = PointPool(total=7, per_trait_max=5)
+        pool.allocate("Strength", 5)
+        assert pool.allocate("Dexterity", 3) is False
+        assert pool.remaining == 2
+
+    def test_allocate_exceeds_per_trait_max(self):
+        pool = PointPool(total=15, per_trait_max=5)
+        assert pool.allocate("Strength", 6) is False
+
+    def test_deallocate(self):
+        pool = PointPool(total=7, per_trait_max=5)
+        pool.allocate("Strength", 3)
+        pool.deallocate("Strength", 1)
+        assert pool.get("Strength") == 2
+        assert pool.remaining == 5
+
+    def test_get_allocations(self):
+        pool = PointPool(total=7, per_trait_max=5)
+        pool.allocate("Strength", 3)
+        pool.allocate("Dexterity", 2)
+        allocs = pool.get_all()
+        assert allocs == {"Strength": 3, "Dexterity": 2}
+
+    def test_reset(self):
+        pool = PointPool(total=7, per_trait_max=5)
+        pool.allocate("Strength", 3)
+        pool.reset()
+        assert pool.remaining == 7
+        assert pool.get_all() == {}

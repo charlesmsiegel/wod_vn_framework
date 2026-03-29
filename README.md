@@ -24,17 +24,34 @@ You write your story in Ren'Py. The framework handles character stats, resource 
 
 ## Quick Start
 
+### Try the demo
+
 1. Install [Ren'Py 8.x](https://www.renpy.org/latest.html).
 2. Clone this repository:
    ```bash
-   git clone <repo-url> wod_vn_framework
+   git clone https://github.com/charlesmsiegel/wod_vn_framework.git
    ```
 3. Run the demo:
    ```bash
-   renpy.sh wod_vn_framework/
+   renpy.sh wod_vn_framework/game/
    ```
 
 The demo loads a pre-built Mage character (Elena Vasquez) and walks through stat-gated choices, resource spending, and outcome branching.
+
+### Start a new game project
+
+**Option A — Script (recommended):**
+```bash
+./make-project.sh my-mage-game
+cd my-mage-game
+renpy.sh game/
+```
+
+This creates a clean project with a starter script, character file, and all framework files — ready to write.
+
+**Option B — GitHub Template:**
+
+Click "Use this template" on GitHub to create a new repo, then follow the steps in `.github/TEMPLATE_SETUP.md`.
 
 ## Project Structure
 

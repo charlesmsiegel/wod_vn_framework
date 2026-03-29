@@ -184,3 +184,20 @@ overrides:
         assert splat.schema.has_trait("Hypertech")
         # Existing traits still present
         assert splat.schema.has_trait("Technology")
+
+
+class TestTemplateExtension:
+    """Test template extends/overrides mechanism."""
+
+    def test_archmage_extends_default(self):
+        loader = SplatLoader(GAME_DIR)
+        splat = loader.load_splat("mage")
+
+        # archmage.yaml extends default_mage with sphere range [0, 10]
+        char = loader.load_character_from_template(
+            "mage", "templates/archmage.yaml",
+            identity_override={"name": "Archmaster"}
+        )
+        # Archmage should allow spheres up to 10
+        assert char.schema.get_range("Forces") == (0, 10)
+        assert char.identity["name"] == "Archmaster"

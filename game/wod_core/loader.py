@@ -152,3 +152,93 @@ class SplatLoader:
                     pool.max = res_value
 
         return char
+
+    def load_character_from_template(
+        self, splat_id: str, template_path: str,
+        identity_override: dict | None = None,
+    ) -> Character:
+        """Load a character from a template, supporting extends/overrides."""
+        if splat_id not in self.loaded_splats:
+            raise ValueError(f"Splat {splat_id!r} not loaded.")
+        splat = self.loaded_splats[splat_id]
+        splat_dir = os.path.dirname(splat.templates_dir.rstrip("/"))
+        full_path = os.path.join(splat_dir, template_path)
+
+        with open(full_path) as f:
+            template_data = yaml.safe_load(f)
+
+        # Handle extends
+        if "extends" in template_data:
+            base_name = template_data["extends"]
+            base_path = os.path.join(splat.templates_dir, f"{base_name}.yaml")
+            with open(base_path) as f:
+                base_data = yaml.safe_load(f)
+
+            # Apply overrides from the extending template
+            if "overrides" in template_data:
+                overrides = template_data["overrides"]
+                # Create modified schema data
+                schema_data_copy = self._schema_to_dict(splat.schema)
+                _apply_overrides(schema_data_copy, splat.resource_config, overrides)
+                schema = Schema(schema_data_copy)
+            else:
+                schema = splat.schema
+
+            char_data = base_data
+        else:
+            schema = splat.schema
+            char_data = template_data
+
+        # Flatten traits
+        flat_traits: dict[str, int] = {}
+        for category_traits in char_data.get("traits", {}).values():
+            if isinstance(category_traits, dict):
+                flat_traits.update(category_traits)
+
+        # Apply identity override
+        identity = char_data.get("identity", {})
+        if identity_override:
+            identity.update(identity_override)
+
+        char = Character(
+            schema=schema,
+            traits=flat_traits,
+            merits_flaws=char_data.get("merits_flaws", []),
+            identity=identity,
+        )
+
+        # Attach resources
+        char.resources = ResourceManager(dict(splat.resource_config))
+        for res_name, res_value in char_data.get("resources", {}).items():
+            if char.resources.has_resource(res_name) and isinstance(res_value, int):
+                pool = char.resources.pools[res_name]
+                pool.current_value = res_value
+                if res_value > pool.max:
+                    pool.max = res_value
+
+        return char
+
+    @staticmethod
+    def _schema_to_dict(schema: Schema) -> dict:
+        """Convert a Schema back to a raw dict for override merging."""
+        data: dict = {"trait_categories": {}, "trait_constraints": []}
+        for cat_name, cat in schema.categories.items():
+            cat_data: dict = {
+                "display_name": cat.display_name,
+                "range": list(cat.range),
+                "default": cat.default,
+            }
+            if cat.groups is not None:
+                cat_data["groups"] = {k: list(v) for k, v in cat.groups.items()}
+            else:
+                cat_data["traits"] = list(cat.trait_names)
+            data["trait_categories"][cat_name] = cat_data
+        for constraint in schema.constraints:
+            if isinstance(constraint, MaxLinkedConstraint):
+                data["trait_constraints"].append({
+                    "type": "max_linked",
+                    "target_category": constraint.target_category,
+                    "limited_by": constraint.limited_by,
+                    "rule": constraint.rule,
+                })
+        return data

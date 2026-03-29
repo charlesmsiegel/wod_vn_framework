@@ -21,6 +21,7 @@ class SplatData:
     resource_config: dict
     manifest: dict
     templates_dir: str
+    chargen_config: dict | None = None
 
 
 class SplatLoader:
@@ -62,12 +63,20 @@ class SplatLoader:
 
         schema = Schema(schema_data)
 
+        # Load chargen config if present
+        chargen_config = None
+        chargen_file = manifest["splat"].get("chargen")
+        if chargen_file:
+            with open(os.path.join(splat_dir, chargen_file)) as f:
+                chargen_config = yaml.safe_load(f)
+
         splat = SplatData(
             splat_id=splat_id,
             schema=schema,
             resource_config=resource_config,
             manifest=manifest,
             templates_dir=templates_dir,
+            chargen_config=chargen_config,
         )
         self.loaded_splats[splat_id] = splat
         return splat

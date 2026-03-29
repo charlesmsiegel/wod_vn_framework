@@ -105,6 +105,26 @@ merits_flaws: []
             loader.load_character(str(char_yaml))
 
 
+class TestChargenConfigLoading:
+    """Test that chargen.yaml is loaded from manifest."""
+
+    def test_chargen_config_loaded(self):
+        loader = SplatLoader(GAME_DIR)
+        splat = loader.load_splat("mage")
+        assert splat.chargen_config is not None
+        assert "modes" in splat.chargen_config
+        assert "traditions" in splat.chargen_config
+        assert len(splat.chargen_config["traditions"]) == 9
+
+    def test_chargen_config_has_all_modes(self):
+        loader = SplatLoader(GAME_DIR)
+        splat = loader.load_splat("mage")
+        modes = splat.chargen_config["modes"]
+        assert "full" in modes
+        assert "simplified" in modes
+        assert "template" in modes
+
+
 class TestResourceMaxFix:
     """Test that resource overrides update max when current > max."""
 

@@ -1,0 +1,43 @@
+schema: mage
+template: va_reality_hacker
+character_type: pc
+identity:
+  name: ""
+  tradition: "Virtual Adepts"
+  essence: "Dynamic"
+  nature: "Rebel"
+  demeanor: "Thrill-Seeker"
+traits:
+  attributes:
+    Strength: 2
+    Dexterity: 3
+    Stamina: 2
+    Charisma: 2
+    Manipulation: 2
+    Appearance: 2
+    Perception: 3
+    Intelligence: 3
+    Wits: 3
+  abilities:
+    Athletics: 1
+    Awareness: 2
+    Technology: 3
+    Firearms: 1
+    Science: 3
+    Computer: 2
+    Occult: 1
+  spheres:
+    Correspondence: 2
+    Forces: 3
+    Prime: 1
+  arete:
+    Arete: 3
+  backgrounds:
+    Avatar: 3
+    Node: 2
+    Resources: 2
+resources:
+  quintessence: 5
+  paradox: 0
+  willpower: 5
+merits_flaws: []

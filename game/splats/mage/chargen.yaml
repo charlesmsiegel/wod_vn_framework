@@ -1,0 +1,162 @@
+# game/splats/mage/chargen.yaml
+modes:
+  full:
+    steps: [identity, attribute_priority, attribute_allocate, ability_priority, ability_allocate, spheres_backgrounds, freebies, review]
+    attribute_priorities: [7, 5, 3]
+    ability_priorities: [13, 9, 5]
+    ability_max_at_creation: 3
+    sphere_dots: 6
+    background_dots: 7
+    freebie_points: 15
+    starting_arete: 1
+    freebie_costs:
+      attribute: 5
+      ability: 2
+      sphere: 7
+      background: 1
+      willpower: 1
+      # Merits cost their listed point value, not a flat rate
+
+  simplified:
+    steps: [identity, attributes, abilities, spheres, review]
+    attribute_dots: 15   # allocatable dots ON TOP of the free 1 per Attribute (total: 24)
+    ability_dots: 27     # allocatable dots (Abilities start at 0)
+    sphere_dots: 6
+    starting_arete: 1
+
+  template:
+    steps: [identity, template_pick, review]
+
+traditions:
+  - id: akashic_brotherhood
+    name: "Akashic Brotherhood"
+    affinity_sphere: Mind
+    free_sphere_dot: Mind
+    templates:
+      - name: "Martial Mystic"
+        description: "Mind and Life focused — inner perfection through physical mastery"
+        file: templates/akashic_martial.yaml
+      - name: "Dream Walker"
+        description: "Mind and Spirit focused — astral explorer and mediator"
+        file: templates/akashic_dream.yaml
+
+  - id: celestial_chorus
+    name: "Celestial Chorus"
+    affinity_sphere: Prime
+    free_sphere_dot: Prime
+    templates:
+      - name: "Sacred Singer"
+        description: "Prime and Forces — channel divine power through prayer and song"
+        file: templates/cc_sacred_singer.yaml
+
+  - id: cult_of_ecstasy
+    name: "Cult of Ecstasy"
+    affinity_sphere: Time
+    free_sphere_dot: Time
+    templates:
+      - name: "Temporal Dancer"
+        description: "Time and Life — ride the flow of experience to alter reality"
+        file: templates/coe_temporal_dancer.yaml
+
+  - id: dreamspeakers
+    name: "Dreamspeakers"
+    affinity_sphere: Spirit
+    free_sphere_dot: Spirit
+    templates:
+      - name: "Spirit Walker"
+        description: "Spirit and Life — bridge the Gauntlet and commune with the unseen"
+        file: templates/ds_spirit_walker.yaml
+
+  - id: euthanatos
+    name: "Euthanatos"
+    affinity_sphere: Entropy
+    free_sphere_dot: Entropy
+    templates:
+      - name: "Fate Weaver"
+        description: "Entropy and Life — shepherd the cycle of death and rebirth"
+        file: templates/euth_fate_weaver.yaml
+
+  - id: order_of_hermes
+    name: "Order of Hermes"
+    affinity_sphere: Forces
+    free_sphere_dot: Forces
+    templates:
+      - name: "Hermetic Scholar"
+        description: "Forces and Prime — classical magick through rigorous study"
+        file: templates/ooh_hermetic_scholar.yaml
+
+  - id: sons_of_ether
+    name: "Sons of Ether"
+    affinity_sphere: Matter
+    free_sphere_dot: Matter
+    templates:
+      - name: "Mad Scientist"
+        description: "Matter and Forces — reshape the world through SCIENCE!"
+        file: templates/soe_mad_scientist.yaml
+
+  - id: verbena
+    name: "Verbena"
+    affinity_sphere: Life
+    free_sphere_dot: Life
+    templates:
+      - name: "Blood Witch"
+        description: "Life and Prime — the old ways of blood and growing things"
+        file: templates/verb_blood_witch.yaml
+
+  - id: virtual_adepts
+    name: "Virtual Adepts"
+    affinity_sphere: Correspondence
+    free_sphere_dot: Correspondence
+    templates:
+      - name: "Code Witch"
+        description: "Correspondence and Mind — network infiltration and digital espionage"
+        file: templates/va_code_witch.yaml
+      - name: "Reality Hacker"
+        description: "Correspondence and Forces — reshape the physical through the digital"
+        file: templates/va_reality_hacker.yaml
+
+# Curated subset of M20 Archetypes
+archetypes:
+  - Architect
+  - Bon Vivant
+  - Bravo
+  - Caregiver
+  - Celebrant
+  - Competitor
+  - Conformist
+  - Conniver
+  - Curmudgeon
+  - Deviant
+  - Director
+  - Gallant
+  - Idealist
+  - Judge
+  - Loner
+  - Martyr
+  - Pedagogue
+  - Penitent
+  - Perfectionist
+  - Rebel
+  - Rogue
+  - Survivor
+  - Thrill-Seeker
+  - Traditionalist
+  - Trickster
+  - Visionary
+
+essences:
+  - Dynamic
+  - Pattern
+  - Primordial
+  - Questing
+
+# Merits and Flaws available during chargen
+merits:
+  - { name: "Avatar Companion", cost: 3, description: "Your Avatar manifests as a companion" }
+  - { name: "Legendary Attribute", cost: 5, description: "One Attribute can be raised to 6" }
+  - { name: "Natural Channel", cost: 3, description: "Quintessence flows easily to you" }
+
+flaws:
+  - { name: "Blind", cost: -6, description: "You cannot see" }
+  - { name: "Nightmares", cost: -1, description: "Disturbing dreams plague your sleep" }
+  - { name: "Sphere Inept", cost: -5, description: "One Sphere is extremely difficult for you" }

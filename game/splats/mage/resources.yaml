@@ -1,0 +1,35 @@
+resources:
+  quintessence:
+    display_name: "Quintessence"
+    range: [0, 20]
+    default: 0
+
+  paradox:
+    display_name: "Paradox"
+    range: [0, 20]
+    default: 0
+
+  willpower:
+    display_name: "Willpower"
+    range: [0, 10]
+    default_max: 5
+    default_current: "max"
+
+  health:
+    display_name: "Health"
+    range: [0, 7]
+    default_current: "max"
+    track_type: "levels"
+    levels:
+      - { name: "Bruised", penalty: 0 }
+      - { name: "Hurt", penalty: -1 }
+      - { name: "Injured", penalty: -1 }
+      - { name: "Wounded", penalty: -2 }
+      - { name: "Mauled", penalty: -2 }
+      - { name: "Crippled", penalty: -5 }
+      - { name: "Incapacitated", penalty: null }
+
+resource_links:
+  quintessence_wheel:
+    pools: [quintessence, paradox]
+    combined_max: 20

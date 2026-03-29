@@ -1,0 +1,34 @@
+schema: mage
+template: default_mage
+character_type: pc
+
+identity:
+  name: ""
+  tradition: ""
+  essence: ""
+  nature: ""
+  demeanor: ""
+
+traits:
+  attributes:
+    Strength: 1
+    Dexterity: 1
+    Stamina: 1
+    Charisma: 1
+    Manipulation: 1
+    Appearance: 1
+    Perception: 1
+    Intelligence: 1
+    Wits: 1
+  abilities: {}
+  spheres: {}
+  arete:
+    Arete: 1
+  backgrounds: {}
+
+resources:
+  quintessence: 0
+  paradox: 0
+  willpower: 5
+
+merits_flaws: []

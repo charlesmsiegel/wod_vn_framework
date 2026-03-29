@@ -1,0 +1,18 @@
+splat:
+  id: mage
+  display_name: "Mage: The Ascension"
+  edition: "M20"
+  version: "1.0"
+  schema: schema.yaml
+  resources: resources.yaml
+  templates_dir: templates/
+  screens:
+    character_sheet: null
+    chargen_steps:
+      - identity
+      - attributes
+      - abilities
+      - spheres
+      - backgrounds
+      - merits_flaws
+      - review

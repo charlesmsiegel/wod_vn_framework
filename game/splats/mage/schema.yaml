@@ -1,0 +1,96 @@
+trait_categories:
+  attributes:
+    display_name: "Attributes"
+    groups:
+      physical: [Strength, Dexterity, Stamina]
+      social: [Charisma, Manipulation, Appearance]
+      mental: [Perception, Intelligence, Wits]
+    default: 1
+    range: [1, 5]
+
+  abilities:
+    display_name: "Abilities"
+    groups:
+      talents:
+        - Alertness
+        - Art
+        - Athletics
+        - Awareness
+        - Brawl
+        - Empathy
+        - Expression
+        - Intimidation
+        - Leadership
+        - Streetwise
+        - Subterfuge
+      skills:
+        - Crafts
+        - Drive
+        - Etiquette
+        - Firearms
+        - Martial Arts
+        - Meditation
+        - Melee
+        - Research
+        - Stealth
+        - Survival
+        - Technology
+      knowledges:
+        - Academics
+        - Computer
+        - Cosmology
+        - Enigmas
+        - Esoterica
+        - Investigation
+        - Law
+        - Medicine
+        - Occult
+        - Politics
+        - Science
+    default: 0
+    range: [0, 5]
+
+  spheres:
+    display_name: "Spheres"
+    traits:
+      - Correspondence
+      - Entropy
+      - Forces
+      - Life
+      - Matter
+      - Mind
+      - Prime
+      - Spirit
+      - Time
+    default: 0
+    range: [0, 5]
+
+  arete:
+    display_name: "Arete"
+    traits: [Arete]
+    default: 1
+    range: [1, 10]
+
+  backgrounds:
+    display_name: "Backgrounds"
+    traits:
+      - Allies
+      - Avatar
+      - Contacts
+      - Destiny
+      - Dream
+      - Familiar
+      - Influence
+      - Mentor
+      - Node
+      - Resources
+      - Sanctum
+      - Wonder
+    default: 0
+    range: [0, 5]
+
+trait_constraints:
+  - type: max_linked
+    target_category: spheres
+    limited_by: Arete
+    rule: "No Sphere can exceed Arete rating"

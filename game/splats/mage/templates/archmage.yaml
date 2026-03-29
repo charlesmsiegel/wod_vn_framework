@@ -1,0 +1,7 @@
+extends: default_mage
+overrides:
+  trait_categories:
+    spheres:
+      range: [0, 10]
+    arete:
+      range: [1, 10]

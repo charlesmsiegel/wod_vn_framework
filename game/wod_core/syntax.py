@@ -2,8 +2,10 @@
 
 Transforms lines like:
     "Choice text" [Forces >= 3, Prime >= 2]:
+    "Pray over it" [via prayer]:
 Into:
     "Choice text" if wod_core.gate("Forces", ">=", 3) and wod_core.gate("Prime", ">=", 2):
+    "Pray over it" if wod_core.can_use("prayer"):
 """
 
 from __future__ import annotations
@@ -23,16 +25,25 @@ _COMPARISON_RE = re.compile(
 
 _NEGATION_RE = re.compile(r'^!(.+)$')
 
+# Paradigm/focus method gate: "via prayer" -> can_use("prayer").
+_VIA_RE = re.compile(r'^via\s+(.+)$', re.IGNORECASE)
+
 # Phase 2: identifier validation registry
 _encountered_identifiers: set[str] = set()
+_encountered_methods: set[str] = set()
 
 
 def _register_identifier(name: str) -> None:
     _encountered_identifiers.add(name)
 
 
+def _register_method(name: str) -> None:
+    _encountered_methods.add(name)
+
+
 def clear_identifiers() -> None:
     _encountered_identifiers.clear()
+    _encountered_methods.clear()
 
 
 def parse_condition(cond: str) -> str:
@@ -47,10 +58,18 @@ def parse_condition(cond: str) -> str:
         _register_identifier(trait_name)
         return f'wod_core.gate("{trait_name}", "{op}", {value})'
 
-    m = _NEGATION_RE.match(cond)
-    if m:
-        name = m.group(1).strip()
-        return f'not wod_core.has("{name}")'
+    # Paradigm/focus method gate, optionally negated: "via X" / "!via X".
+    neg = _NEGATION_RE.match(cond)
+    body = neg.group(1).strip() if neg else cond
+    via = _VIA_RE.match(body)
+    if via:
+        method = via.group(1).strip()
+        _register_method(method)
+        expr = f'wod_core.can_use("{method}")'
+        return f"not {expr}" if neg else expr
+
+    if neg:
+        return f'not wod_core.has("{body}")'
 
     return f'wod_core.has("{cond}")'
 
@@ -85,7 +104,12 @@ def _closest_match(name: str, valid_names: list[str]) -> str | None:
 def validate_identifiers(
     schema, resource_names: list[str] | None = None
 ) -> list[str]:
-    """Validate all encountered identifiers against the schema and resources."""
+    """Validate all encountered identifiers against the schema and resources.
+
+    Trait/resource names (from comparison gates) are checked against the schema
+    and resource pools. Casting methods (from ``via`` gates) are checked against
+    the schema's paradigm registry, when one is defined.
+    """
     valid_names = set(schema.get_all_trait_names())
     if resource_names:
         valid_names.update(resource_names)
@@ -98,4 +122,17 @@ def validate_identifiers(
             if suggestion:
                 msg += f' Did you mean "{suggestion}"?'
             errors.append(msg)
+
+    paradigm = getattr(schema, "paradigm", None)
+    if paradigm is not None:
+        valid_methods = paradigm.all_methods()
+        if valid_methods:
+            for method in _encountered_methods:
+                if method not in valid_methods:
+                    msg = f'Unknown casting method "{method}" in via condition.'
+                    suggestion = _closest_match(method, list(valid_methods))
+                    if suggestion:
+                        msg += f' Did you mean "{suggestion}"?'
+                    errors.append(msg)
+
     return errors

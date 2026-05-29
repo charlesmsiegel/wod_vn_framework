@@ -25,9 +25,19 @@ label start:
 
     "Your Avatar stirs. There are several ways to approach this."
 
+    ## Paradigm/Focus gating — Elena is a Virtual Adept, so her paradigm-appropriate
+    ## methods are code and hypertech, never prayer. can_use() reflects that.
+    if pc.can_use("prayer"):
+        elena "I could pray for a way through."
+    else:
+        elena "Prayer isn't my Focus. I'm a Virtual Adept — reality is just code waiting to be rewritten."
+
     menu ward_choice:
         "Analyze the ward's Pattern" if pc.gate("Forces", ">=", 3) and pc.gate("Prime", ">=", 2):
             jump analyze_ward
+
+        "Rewrite the ward's source" if pc.can_use("code"):
+            jump rewrite_code
 
         "Brute-force the encryption" if pc.gate("Technology", ">=", 3):
             jump brute_force
@@ -37,6 +47,22 @@ label start:
 
         "This is beyond me. Leave.":
             jump leave
+
+
+label rewrite_code:
+
+    elena "Everything's information. This ward is no exception."
+
+    "You open a console only you can see and begin rewriting the ward's defining parameters from the inside."
+
+    if pc.gate("Correspondence", ">=", 1):
+        "Your grasp of Correspondence lets you reach the ward as if you were already standing within it."
+        elena "There. As far as the Pattern is concerned, I was always supposed to be here."
+    else:
+        "Without Correspondence you can only nudge the edges — but it is enough to slip a process through the gap."
+        elena "Crude. But it worked."
+
+    jump epilogue
 
 
 label analyze_ward:
@@ -138,6 +164,7 @@ label epilogue:
     "This demo exercised the WoD VN Framework's core features:"
     "  - Character loading from YAML"
     "  - Stat-gated menu choices (Forces, Prime, Technology, Awareness)"
+    "  - Paradigm/Focus gating (a Virtual Adept casts via code, not prayer)"
     "  - Resource spending (Quintessence)"
     "  - Linked pool constraints (Paradox gain)"
     "  - Outcome branching based on stat levels"

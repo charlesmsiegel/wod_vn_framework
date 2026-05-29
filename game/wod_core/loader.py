@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 import yaml
 
-from wod_core.engine import Schema, Character, MaxLinkedConstraint
+from wod_core.engine import Schema, Character
 from wod_core.resources import ResourceManager
 
 
@@ -221,24 +221,4 @@ class SplatLoader:
     @staticmethod
     def _schema_to_dict(schema: Schema) -> dict:
         """Convert a Schema back to a raw dict for override merging."""
-        data: dict = {"trait_categories": {}, "trait_constraints": []}
-        for cat_name, cat in schema.categories.items():
-            cat_data: dict = {
-                "display_name": cat.display_name,
-                "range": list(cat.range),
-                "default": cat.default,
-            }
-            if cat.groups is not None:
-                cat_data["groups"] = {k: list(v) for k, v in cat.groups.items()}
-            else:
-                cat_data["traits"] = list(cat.trait_names)
-            data["trait_categories"][cat_name] = cat_data
-        for constraint in schema.constraints:
-            if isinstance(constraint, MaxLinkedConstraint):
-                data["trait_constraints"].append({
-                    "type": "max_linked",
-                    "target_category": constraint.target_category,
-                    "limited_by": constraint.limited_by,
-                    "rule": constraint.rule,
-                })
-        return data
+        return schema.to_dict()

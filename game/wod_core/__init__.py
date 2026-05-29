@@ -4,7 +4,7 @@ from __future__ import annotations
 
 __version__ = "0.1.0"
 
-from wod_core.gating import gate, has, set_active, get_active
+from wod_core.gating import gate, has, can_use, set_active, get_active
 from wod_core.loader import SplatLoader
 
 _loader: SplatLoader | None = None

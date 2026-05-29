@@ -23,13 +23,105 @@ class CategoryDef:
             self.trait_names = list(data["traits"])
 
 
+def _normalize_tradition(key: str) -> str:
+    """Normalize a Tradition id/name so authors can key by either.
+
+    "Virtual Adepts" and "virtual_adepts" both normalize to "virtual_adepts".
+    """
+    return key.strip().lower().replace(" ", "_").replace("-", "_")
+
+
+class Paradigm:
+    """Optional paradigm/focus system — which casting *methods* each Tradition allows.
+
+    A Virtual Adept can cast through "code" but not "prayer"; a Celestial Chorister
+    is the reverse. Authors declare a registry of methods plus a per-Tradition
+    allow-list, then gate choices with ``can_use("method")``.
+
+    Parsed from a schema's optional ``paradigm`` block::
+
+        paradigm:
+          methods:                  # registry (id -> display name); optional
+            code: "Cybernetics & Code"
+            prayer: "Prayer & Faith"
+          traditions:               # per-Tradition allow-lists
+            virtual_adepts: [code, science]
+            celestial_chorus: [prayer, art]
+            default: [code]         # optional fallback for unlisted Traditions
+
+    ``methods`` may also be a plain list of ids; display names then default to
+    the id. If ``methods`` is omitted entirely, the registry is inferred from
+    the union of the per-Tradition lists.
+    """
+
+    def __init__(self, data: dict):
+        self.method_names: dict[str, str] = {}
+        methods = data.get("methods")
+        if isinstance(methods, dict):
+            for mid, disp in methods.items():
+                self.method_names[mid] = disp if isinstance(disp, str) else mid
+        elif isinstance(methods, list):
+            for item in methods:
+                if isinstance(item, dict):
+                    mid = item.get("id")
+                    if mid is None and len(item) == 1:
+                        mid, disp = next(iter(item.items()))
+                        self.method_names[mid] = disp
+                    elif mid is not None:
+                        self.method_names[mid] = item.get("name", mid)
+                else:
+                    self.method_names[item] = item
+
+        self.tradition_methods: dict[str, set[str]] = {}
+        for trad, mlist in (data.get("traditions") or {}).items():
+            self.tradition_methods[_normalize_tradition(trad)] = set(mlist or [])
+
+    @property
+    def declared_methods(self) -> list[str]:
+        """Method ids in the explicit registry (insertion order)."""
+        return list(self.method_names.keys())
+
+    def all_methods(self) -> set[str]:
+        """Every method id known to the paradigm (registry + all Tradition lists)."""
+        methods = set(self.method_names)
+        for allowed in self.tradition_methods.values():
+            methods |= allowed
+        return methods
+
+    def methods_for(self, tradition: str | None) -> set[str]:
+        """Methods permitted to a Tradition, falling back to ``default`` if listed."""
+        if tradition:
+            norm = _normalize_tradition(tradition)
+            if norm in self.tradition_methods:
+                return self.tradition_methods[norm]
+        return self.tradition_methods.get("default", set())
+
+    def can_use(self, method: str, tradition: str | None) -> bool:
+        return method in self.methods_for(tradition)
+
+    def display_name(self, method: str) -> str:
+        return self.method_names.get(method, method)
+
+    def to_dict(self) -> dict:
+        """Reconstruct the raw ``paradigm`` block (for pickle / override round-trips)."""
+        data: dict = {}
+        if self.method_names:
+            data["methods"] = dict(self.method_names)
+        if self.tradition_methods:
+            data["traditions"] = {
+                trad: sorted(methods) for trad, methods in self.tradition_methods.items()
+            }
+        return data
+
+
 class Schema:
-    """Splat schema — trait categories, ranges, defaults, constraints."""
+    """Splat schema — trait categories, ranges, defaults, constraints, paradigm."""
 
     def __init__(self, data: dict):
         self.categories: dict[str, CategoryDef] = {}
         self.trait_lookup: dict[str, str] = {}
         self.constraints: list[Constraint] = []
+        self.paradigm: Paradigm | None = None
         self._parse(data)
 
     def _parse(self, data: dict) -> None:
@@ -47,6 +139,9 @@ class Schema:
         for constraint_data in data.get("trait_constraints", []):
             self.constraints.append(Constraint.from_dict(constraint_data))
 
+        if data.get("paradigm"):
+            self.paradigm = Paradigm(data["paradigm"])
+
     def get_all_trait_names(self) -> list[str]:
         return list(self.trait_lookup.keys())
 
@@ -60,6 +155,42 @@ class Schema:
     def get_default(self, trait_name: str) -> int:
         cat_name = self.trait_lookup[trait_name]
         return self.categories[cat_name].default
+
+    def can_use(self, method: str, tradition: str | None) -> bool:
+        """Whether a Tradition may cast via ``method``.
+
+        Returns ``True`` when no paradigm is configured — the optional system
+        is simply off, so nothing is restricted.
+        """
+        if self.paradigm is None:
+            return True
+        return self.paradigm.can_use(method, tradition)
+
+    def to_dict(self) -> dict:
+        """Serialize back to a raw schema dict (categories, constraints, paradigm)."""
+        data: dict = {"trait_categories": {}, "trait_constraints": []}
+        for cat_name, cat in self.categories.items():
+            cat_data: dict = {
+                "display_name": cat.display_name,
+                "range": list(cat.range),
+                "default": cat.default,
+            }
+            if cat.groups is not None:
+                cat_data["groups"] = {k: list(v) for k, v in cat.groups.items()}
+            else:
+                cat_data["traits"] = list(cat.trait_names)
+            data["trait_categories"][cat_name] = cat_data
+        for constraint in self.constraints:
+            if isinstance(constraint, MaxLinkedConstraint):
+                data["trait_constraints"].append({
+                    "type": "max_linked",
+                    "target_category": constraint.target_category,
+                    "limited_by": constraint.limited_by,
+                    "rule": constraint.rule,
+                })
+        if self.paradigm is not None:
+            data["paradigm"] = self.paradigm.to_dict()
+        return data
 
 
 class Constraint:
@@ -207,6 +338,14 @@ class Character:
     def has(self, name: str) -> bool:
         return any(mf["name"] == name for mf in self.merits_flaws)
 
+    def can_use(self, method: str) -> bool:
+        """Whether this character's paradigm permits casting via ``method``.
+
+        Resolves the character's Tradition from ``identity["tradition"]``. Returns
+        ``True`` when the schema defines no paradigm (the optional system is off).
+        """
+        return self.schema.can_use(method, self.identity.get("tradition"))
+
     _OPERATORS = {
         ">=": lambda a, b: a >= b,
         "<=": lambda a, b: a <= b,
@@ -228,35 +367,14 @@ class Character:
         return self._OPERATORS[op](current, value)
 
     def __getstate__(self):
-        """Exclude Schema object from pickle — store raw data instead."""
+        """Exclude Schema object from pickle — store reconstructable raw data instead."""
         state = self.__dict__.copy()
         # Temporary modifiers are reapplied by game logic — never persisted.
         state.pop("modifiers", None)
         # Schema is large and reconstructable — store the raw data instead
         if "schema" in state:
             schema = state.pop("schema")
-            # Reconstruct the data dict from the Schema object
-            schema_data: dict = {"trait_categories": {}, "trait_constraints": []}
-            for cat_name, cat in schema.categories.items():
-                cat_data: dict = {
-                    "display_name": cat.display_name,
-                    "range": list(cat.range),
-                    "default": cat.default,
-                }
-                if cat.groups is not None:
-                    cat_data["groups"] = {k: list(v) for k, v in cat.groups.items()}
-                else:
-                    cat_data["traits"] = list(cat.trait_names)
-                schema_data["trait_categories"][cat_name] = cat_data
-            for constraint in schema.constraints:
-                if isinstance(constraint, MaxLinkedConstraint):
-                    schema_data["trait_constraints"].append({
-                        "type": "max_linked",
-                        "target_category": constraint.target_category,
-                        "limited_by": constraint.limited_by,
-                        "rule": constraint.rule,
-                    })
-            state["_schema_data"] = schema_data
+            state["_schema_data"] = schema.to_dict() if schema is not None else None
         return state
 
     def __setstate__(self, state):

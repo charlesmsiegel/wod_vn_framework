@@ -332,6 +332,47 @@ if wod_core.has("Avatar Companion"):
 
 These delegate to whichever character was last set as active.
 
+### Paradigm & Focus Gating (Optional)
+
+Stats are not the only thing that should decide whether a choice is available. In *Mage*, a character's **paradigm** — their model of how reality works — and their **Focus** determine *how* they can work magick. A Virtual Adept rewrites reality through code and hypertech; she would never cast through prayer. A Celestial Chorister is the reverse.
+
+The framework lets a splat declare paradigm-appropriate **methods** per Tradition. Authors then gate choices on those methods, in addition to stats:
+
+```renpy
+if pc.can_use("code"):
+    "You open a console only you can see and rewrite the ward's parameters."
+
+menu:
+    "Rewrite the ward's source" if pc.can_use("code"):
+        jump rewrite_code
+
+    "Pray for a way through" if pc.can_use("prayer"):
+        jump pray
+
+    "Walk away":
+        jump leave
+```
+
+`pc.can_use(method)` returns `True` if the character's Tradition (read from `identity["tradition"]`) permits that casting method. A module-level `wod_core.can_use(method)` is also available after `set_active()`.
+
+The system is **opt-in and permissive**: if a splat defines no paradigm, `can_use()` returns `True` for everything, so nothing is restricted and existing games are unaffected. A Tradition that has no declared method list (and no `default`) cannot use any specific method.
+
+Methods are defined in the splat's `schema.yaml` — see [Defining a Paradigm](#defining-a-paradigm). For the bracket shorthand equivalent, see [`[via method]`](#5-bracket-shorthand).
+
+The Mage splat ships with this paradigm:
+
+| Tradition | Methods |
+|-----------|---------|
+| Akashic Brotherhood | meditation, martial_arts |
+| Celestial Chorus | prayer, art |
+| Cult of Ecstasy | art, dreaming |
+| Dreamspeakers | spirit_speech, dreaming |
+| Euthanatos | death_work, meditation |
+| Order of Hermes | ritual |
+| Sons of Ether | science |
+| Verbena | blood, herbalism, ritual |
+| Virtual Adepts | code, science |
+
 ### Outcome Branching
 
 Gate checks are not limited to menu choices. Use them anywhere for branching:
@@ -368,6 +409,9 @@ For authors who prefer a more concise syntax, the framework includes a pre-proce
 
 "Reject the dark path" [!Sphere Inept]:
     jump reject
+
+"Rewrite the ward's source" [via code]:
+    jump rewrite_code
 ```
 
 ```renpy
@@ -380,6 +424,9 @@ For authors who prefer a more concise syntax, the framework includes a pre-proce
 
 "Reject the dark path" if not wod_core.has("Sphere Inept"):
     jump reject
+
+"Rewrite the ward's source" if wod_core.can_use("code"):
+    jump rewrite_code
 ```
 
 ### Rules
@@ -387,6 +434,7 @@ For authors who prefer a more concise syntax, the framework includes a pre-proce
 - `[Trait >= N]` becomes `wod_core.gate("Trait", ">=", N)` -- any comparison operator works.
 - `[Merit Name]` (no operator) becomes `wod_core.has("Merit Name")`.
 - `[!Flaw Name]` (leading `!`) becomes `not wod_core.has("Flaw Name")`.
+- `[via method]` becomes `wod_core.can_use("method")` -- paradigm/Focus gating (see [Paradigm & Focus Gating](#paradigm--focus-gating-optional)). `[!via method]` negates it.
 - Multiple conditions separated by commas are joined with `and`.
 
 ### Running the Pre-Processor
@@ -783,6 +831,28 @@ Key concepts:
 
 The **`resonance`** category models M20 Resonance as three rated traits -- Dynamic, Entropic, and Static. Because it is an ordinary trait category, Resonance works with every framework feature automatically: gating (`[Static >= 2]`), the character sheet (it appears on the Spheres & Backgrounds tab via `manifest.yaml`), chargen (the identity step offers a Resonance picker and grants `starting_resonance` dots), and save/load. To rename or extend the types, edit this category or append to it with a [splat override](#11-customization) -- chargen reads the type list straight from the schema.
 
+#### Defining a Paradigm
+
+An optional `paradigm` block declares the casting **methods** each Tradition may use, powering [Paradigm & Focus Gating](#paradigm--focus-gating-optional). It lives alongside `trait_categories` in `schema.yaml`:
+
+```yaml
+paradigm:
+  methods:                        # registry: method id -> display name
+    code: "Cybernetics & Code"
+    prayer: "Prayer & Faith"
+    ritual: "High Ritual Magick"
+  traditions:                     # per-Tradition allow-lists
+    virtual_adepts: [code, science]
+    celestial_chorus: [prayer, art]
+    default: [code]               # optional: fallback for unlisted Traditions
+```
+
+- **`methods`** is the registry of method ids. It may be a mapping of `id: "Display Name"` (used in the character sheet's Focus panel) or a plain list of ids. If omitted, the registry is inferred from the union of the per-Tradition lists.
+- **`traditions`** maps each Tradition to the methods it permits. Keys match the `id` *or* `name` from `chargen.yaml` — `virtual_adepts` and `"Virtual Adepts"` both work.
+- **`default`** (optional) supplies methods for any Tradition not explicitly listed (and for characters with no Tradition). Without it, unlisted Traditions can use no methods.
+
+The whole block is optional. Omit it and `can_use()` returns `True` for everything. The pre-processor's identifier validation also checks `[via method]` names against this registry and suggests corrections for typos.
+
 ### resources.yaml
 
 See [Section 6: Resources](#6-resources) for the full format. Key sections:
@@ -929,6 +999,7 @@ Test files:
 |------|----------|
 | `tests/test_engine.py` | Character creation, trait get/set/advance, range validation, constraints, temporary modifiers |
 | `tests/test_gating.py` | Gate operators, merit checks, module-level gating |
+| `tests/test_paradigm.py` | Paradigm/Focus gating — per-Tradition casting methods, `via` shorthand |
 | `tests/test_resources.py` | Spend/gain, linked pools (Quintessence Wheel), pool caps |
 | `tests/test_chargen.py` | ChargenState, PointPool allocation, build_character |
 | `tests/test_syntax.py` | Bracket shorthand parsing and transformation |

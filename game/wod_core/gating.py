@@ -26,3 +26,7 @@ def gate(name: str, op: str, value: int) -> bool:
 
 def has(name: str) -> bool:
     return get_active().has(name)
+
+
+def can_use(method: str) -> bool:
+    return get_active().can_use(method)

@@ -1,0 +1,161 @@
+# ============================================================================
+#  IMAGE MANIFEST  --  Demo chronicle "The Hollow Vigil" (Mage: The Ascension)
+# ============================================================================
+#
+# This is the canonical list of art assets the demo chronicle needs. Until a
+# real file is supplied, the framework renders a self-describing placeholder
+# (see game/images.rpy), so the chronicle is fully playable with NO art.
+#
+# To supply real art, drop a file at the `file` path below. The runtime checks
+# `renpy.loadable(file)` and uses the file if present -- no code change needed.
+#
+# Conventions:
+#   * `name`  -- the image name the script references (decoupled from `file`).
+#   * `file`  -- where to put the real asset, relative to game/.
+#   * `size`  -- target [width, height] in px. Backgrounds/CGs are full-frame
+#                at the project resolution (1920x1080, see game/gui.rpy).
+#   * Sprites should be PNGs with transparency, full-figure, bottom-aligned.
+#
+# Keep this file in sync with WOD_CHRONICLE_ART in game/images.rpy.
+
+meta:
+  chronicle: "The Hollow Vigil"
+  splat: mage
+  resolution: [1920, 1080]
+  protagonist: "Soraya Mir, Order of Hermes (game/demo/soraya.yaml)"
+  placeholder_source: game/images.rpy
+  total_assets: 18
+
+backgrounds:
+  - name: apartment_night
+    file: images/bg/apartment_night.png
+    size: [1920, 1080]
+    scenes: [1]
+    description: >-
+      Soraya's cramped Hermetic study at night: candle-lit desk, brass
+      astrolabe, stacked grimoires and ley-line charts, rain on a dark window.
+  - name: rain_street
+    file: images/bg/rain_street.png
+    size: [1920, 1080]
+    scenes: [1]
+    description: >-
+      Rain-slick city street after midnight, sodium streetlights smearing on
+      wet asphalt, old townhouses, the chantry's silhouette at the far end.
+  - name: chantry_exterior
+    file: images/bg/chantry_exterior.png
+    size: [1920, 1080]
+    scenes: [1]
+    description: >-
+      Imposing gothic townhouse (the Order's chantry), iron gate ajar, one
+      amber-lit upper window, fog pooling on the stone steps.
+  - name: sanctum_library
+    file: images/bg/sanctum_library.png
+    size: [1920, 1080]
+    scenes: [2]
+    description: >-
+      Two-storey sanctum library: floor-to-ceiling shelves, a great brass
+      orrery, green-shaded lamps, a worktable strewn with star-charts.
+  - name: sanctum_residue
+    file: images/bg/sanctum_residue.png
+    size: [1920, 1080]
+    scenes: [2]
+    description: >-
+      The same library through Awakened sight: glowing Prime residue, drifting
+      motes, half-burnt sigils smouldering violet in the air.
+  - name: node_chamber
+    file: images/bg/node_chamber.png
+    size: [1920, 1080]
+    scenes: [3]
+    description: >-
+      Stone undercroft housing the Node: a luminous quintessential spring at
+      centre, a runic floor, warm gold light welling up the walls.
+  - name: node_breach
+    file: images/bg/node_breach.png
+    size: [1920, 1080]
+    scenes: [3]
+    description: >-
+      The Node chamber gone wrong: a jagged tear of static and bruised light,
+      the room's geometry bending, Paradox bleeding across the runes.
+  - name: vigil_threshold
+    file: images/bg/vigil_threshold.png
+    size: [1920, 1080]
+    scenes: [4]
+    description: >-
+      A liminal dream-threshold: an endless candle-lit corridor dissolving into
+      starless dark, reality worn thin -- where the wraith holds vigil.
+  - name: dawn_rooftop
+    file: images/bg/dawn_rooftop.png
+    size: [1920, 1080]
+    scenes: [5]
+    description: >-
+      A city rooftop at first light: pale gold sky, mist over the streets, the
+      storm spent. Quiet, exhausted dawn.
+
+sprites:
+  - name: soraya neutral
+    file: images/sprites/soraya/neutral.png
+    size: [560, 1040]
+    scenes: [1, 2, 3, 4, 5]
+    description: >-
+      Soraya Mir, late 20s, Order of Hermes: dark coat over a waistcoat,
+      ink-stained fingers, a brass focus-ring. Composed, watchful.
+  - name: soraya focused
+    file: images/sprites/soraya/focused.png
+    size: [560, 1040]
+    scenes: [2, 3, 4]
+    description: >-
+      Soraya mid-working: eyes lit with Awakened focus, a hand tracing a sigil,
+      a faint gold Quintessence glow at her fingertips.
+  - name: soraya strained
+    file: images/sprites/soraya/strained.png
+    size: [560, 1040]
+    scenes: [3, 4]
+    description: >-
+      Soraya strained: jaw set, sweat at the brow, faint Paradox static
+      crackling at her silhouette. Wounded resolve.
+  - name: vance calm
+    file: images/sprites/vance/calm.png
+    size: [560, 1040]
+    scenes: [1, 4]
+    description: >-
+      Magister Aurelio Vance, 60s, silver-bearded, tweed jacket with a
+      star-chart sash; kindly, tired eyes. The mentor as he was.
+  - name: vance wraith
+    file: images/sprites/vance/wraith.png
+    size: [560, 1040]
+    scenes: [4]
+    description: >-
+      Vance consumed by Paradox: half-dissolved into flickering static and
+      mirror-shards, eyes like blown-out screens. Sorrowful and monstrous.
+  - name: corvin
+    file: images/sprites/corvin/corvin.png
+    size: [560, 1040]
+    scenes: [2, 4]
+    description: >-
+      Corvin, Vance's raven-familiar: a large black bird limned in faint silver
+      spirit-light, too-knowing eyes. Visible only to Spirit sight.
+
+cgs:
+  - name: cg_breach
+    file: images/cg/breach.png
+    size: [1920, 1080]
+    scenes: [3]
+    description: >-
+      The Node ruptures: Soraya silhouetted against a blossoming tear of Paradox
+      light, charts and candle-flames whipping up around her.
+  - name: cg_severance
+    file: images/cg/severance.png
+    size: [1920, 1080]
+    scenes: [4]
+    description: >-
+      Soraya severs the wraith's tether: a blade of Prime light parting Vance's
+      static form, his face for one instant human again.
+
+ui:
+  - name: chronicle_title
+    file: images/ui/title.png
+    size: [1200, 460]
+    scenes: [1]
+    description: >-
+      Title treatment: 'THE HOLLOW VIGIL' in engraved Cinzel-style serif with a
+      faint hermetic sigil and ley-line motif. Transparent background.

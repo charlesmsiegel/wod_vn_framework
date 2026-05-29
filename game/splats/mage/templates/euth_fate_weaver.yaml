@@ -1,0 +1,45 @@
+schema: mage
+template: euth_fate_weaver
+character_type: pc
+identity:
+  name: ""
+  tradition: "Euthanatos"
+  essence: "Questing"
+  nature: "Martyr"
+  demeanor: "Judge"
+traits:
+  attributes:
+    Strength: 2
+    Dexterity: 2
+    Stamina: 2
+    Charisma: 2
+    Manipulation: 3
+    Appearance: 2
+    Perception: 3
+    Intelligence: 4
+    Wits: 2
+  abilities:
+    Awareness: 2
+    Empathy: 2
+    Enigmas: 2
+    Investigation: 2
+    Medicine: 2
+    Meditation: 1
+    Occult: 3
+  spheres:
+    Entropy: 3
+    Life: 2
+    Spirit: 1
+  arete:
+    Arete: 3
+  backgrounds:
+    Avatar: 2
+    Mentor: 2
+    Node: 2
+    Allies: 1
+resources:
+  quintessence: 4
+  paradox: 0
+  willpower: 5
+merits_flaws:
+  - { name: "Nightmares", type: flaw, value: -1 }

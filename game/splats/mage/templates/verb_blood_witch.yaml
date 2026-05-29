@@ -1,0 +1,45 @@
+schema: mage
+template: verb_blood_witch
+character_type: pc
+identity:
+  name: ""
+  tradition: "Verbena"
+  essence: "Primordial"
+  nature: "Survivor"
+  demeanor: "Rebel"
+traits:
+  attributes:
+    Strength: 2
+    Dexterity: 3
+    Stamina: 4
+    Charisma: 3
+    Manipulation: 2
+    Appearance: 2
+    Perception: 2
+    Intelligence: 2
+    Wits: 2
+  abilities:
+    Awareness: 2
+    Crafts: 1
+    Empathy: 2
+    Intimidation: 1
+    Medicine: 3
+    Occult: 3
+    Survival: 2
+  spheres:
+    Life: 3
+    Prime: 2
+    Spirit: 1
+  arete:
+    Arete: 3
+  backgrounds:
+    Avatar: 2
+    Node: 2
+    Mentor: 2
+    Familiar: 1
+resources:
+  quintessence: 5
+  paradox: 0
+  willpower: 5
+merits_flaws:
+  - { name: "Avatar Companion", type: merit, value: 3 }

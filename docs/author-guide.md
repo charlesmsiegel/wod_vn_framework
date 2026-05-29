@@ -558,6 +558,24 @@ Pick a pre-built character archetype:
 
 Templates are full character YAML files stored in `game/splats/mage/templates/`.
 
+**Bundled templates** -- every Tradition ships with at least one ready-to-play
+archetype (Arete 3, balanced ~22 Attribute / ~14 Ability / 6 Sphere / 7
+Background dots):
+
+| Tradition | Template | Focus |
+|-----------|----------|-------|
+| Akashic Brotherhood | Martial Mystic | Mind / Life -- inner perfection through physical mastery |
+| Akashic Brotherhood | Dream Walker | Mind / Spirit -- astral explorer and mediator |
+| Celestial Chorus | Sacred Singer | Prime / Forces -- channel divine power through prayer and song |
+| Cult of Ecstasy | Temporal Dancer | Time / Life -- ride the flow of experience to alter reality |
+| Dreamspeakers | Spirit Walker | Spirit / Life -- bridge the Gauntlet and commune with the unseen |
+| Euthanatos | Fate Weaver | Entropy / Life -- shepherd the cycle of death and rebirth |
+| Order of Hermes | Hermetic Scholar | Forces / Prime -- classical magick through rigorous study |
+| Sons of Ether | Mad Scientist | Matter / Forces -- reshape the world through SCIENCE! |
+| Verbena | Blood Witch | Life / Prime -- the old ways of blood and growing things |
+| Virtual Adepts | Code Witch | Correspondence / Mind -- network infiltration and digital espionage |
+| Virtual Adepts | Reality Hacker | Correspondence / Forces -- reshape the physical through the digital |
+
 ### Presets
 
 You can pre-fill identity fields:

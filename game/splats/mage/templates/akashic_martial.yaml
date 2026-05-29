@@ -1,0 +1,45 @@
+schema: mage
+template: akashic_martial
+character_type: pc
+identity:
+  name: ""
+  tradition: "Akashic Brotherhood"
+  essence: "Pattern"
+  nature: "Perfectionist"
+  demeanor: "Traditionalist"
+traits:
+  attributes:
+    Strength: 2
+    Dexterity: 4
+    Stamina: 3
+    Charisma: 2
+    Manipulation: 1
+    Appearance: 2
+    Perception: 3
+    Intelligence: 2
+    Wits: 3
+  abilities:
+    Alertness: 2
+    Athletics: 2
+    Awareness: 2
+    Empathy: 1
+    Martial Arts: 3
+    Meditation: 3
+    Occult: 1
+  spheres:
+    Mind: 3
+    Life: 2
+    Forces: 1
+  arete:
+    Arete: 3
+  backgrounds:
+    Avatar: 2
+    Mentor: 2
+    Sanctum: 2
+    Allies: 1
+resources:
+  quintessence: 5
+  paradox: 0
+  willpower: 5
+merits_flaws:
+  - { name: "Natural Channel", type: merit, value: 3 }

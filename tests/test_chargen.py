@@ -1,6 +1,7 @@
 # tests/test_chargen.py
 import os
 import pytest
+import yaml
 from wod_core.chargen import (
     ChargenState,
     PointPool,
@@ -10,6 +11,23 @@ from wod_core.chargen import (
 from wod_core.loader import SplatLoader
 
 GAME_DIR = os.path.join(os.path.dirname(__file__), "..", "game")
+
+
+def _all_tradition_templates():
+    """Collect (tradition, template) pairs from chargen.yaml for parametrization."""
+    splat = SplatLoader(GAME_DIR).load_splat("mage")
+    return [
+        (trad, tmpl)
+        for trad in splat.chargen_config.get("traditions", [])
+        for tmpl in trad.get("templates", [])
+    ]
+
+
+_TEMPLATE_PARAMS = _all_tradition_templates()
+_TEMPLATE_IDS = [
+    f"{trad['id']}-{os.path.basename(tmpl['file'])}"
+    for trad, tmpl in _TEMPLATE_PARAMS
+]
 
 
 @pytest.fixture
@@ -309,3 +327,71 @@ class TestResonance:
 
         # va_code_witch.yaml defines Dynamic: 2.
         assert char.get("Dynamic") == 2
+
+
+class TestTraditionTemplates:
+    """Every Tradition ships at least one buildable template (issue #10)."""
+
+    def test_all_nine_traditions_present(self, mage_splat):
+        names = {t["name"] for t in mage_splat.chargen_config["traditions"]}
+        assert names == {
+            "Akashic Brotherhood", "Celestial Chorus", "Cult of Ecstasy",
+            "Dreamspeakers", "Euthanatos", "Order of Hermes",
+            "Sons of Ether", "Verbena", "Virtual Adepts",
+        }
+
+    def test_every_tradition_has_a_template(self, mage_splat):
+        for trad in mage_splat.chargen_config["traditions"]:
+            assert len(trad.get("templates", [])) >= 1, \
+                f"{trad['name']} has no templates"
+
+    @pytest.mark.parametrize("tradition,template", _TEMPLATE_PARAMS, ids=_TEMPLATE_IDS)
+    def test_template_builds(self, mage_splat, tradition, template):
+        """Each referenced template file loads and builds into a valid Character."""
+        state = ChargenState(
+            "mage", "template", mage_splat.schema,
+            mage_splat.chargen_config, mage_splat,
+        )
+        state.save_step("identity", {"name": "Test Hero"})
+        state.save_step("template_pick", {
+            "tradition": tradition["id"],
+            "template_file": template["file"],
+        })
+
+        char = build_character(state)
+
+        # Player name override applied; tradition matches the config entry.
+        assert char.identity["name"] == "Test Hero"
+        assert char.identity["tradition"] == tradition["name"]
+        # Resources are attached and usable.
+        assert char.resources is not None
+        assert char.resources.has_resource("willpower")
+        # The template leads with its Tradition's affinity Sphere.
+        assert char.get(tradition["affinity_sphere"]) >= 1
+        # No Sphere exceeds Arete (engine enforces this on build; assert anyway).
+        arete = char.get("Arete")
+        for sphere in ("Correspondence", "Entropy", "Forces", "Life", "Matter",
+                       "Mind", "Prime", "Spirit", "Time"):
+            assert char.get(sphere) <= arete
+
+    @pytest.mark.parametrize("tradition,template", _TEMPLATE_PARAMS, ids=_TEMPLATE_IDS)
+    def test_template_identity_fields_valid(self, mage_splat, tradition, template):
+        """Essence, archetypes, and merits/flaws reference valid chargen entries."""
+        path = os.path.join(GAME_DIR, "splats", "mage", template["file"])
+        with open(path) as f:
+            data = yaml.safe_load(f)
+
+        cfg = mage_splat.chargen_config
+        ident = data["identity"]
+        assert ident["tradition"] == tradition["name"]
+        assert ident["essence"] in cfg["essences"]
+        assert ident["nature"] in cfg["archetypes"]
+        assert ident["demeanor"] in cfg["archetypes"]
+
+        merit_names = {m["name"] for m in cfg["merits"]}
+        flaw_names = {f["name"] for f in cfg["flaws"]}
+        for mf in data.get("merits_flaws", []):
+            if mf["type"] == "merit":
+                assert mf["name"] in merit_names, f"unknown merit {mf['name']!r}"
+            elif mf["type"] == "flaw":
+                assert mf["name"] in flaw_names, f"unknown flaw {mf['name']!r}"

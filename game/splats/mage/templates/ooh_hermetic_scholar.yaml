@@ -1,0 +1,45 @@
+schema: mage
+template: ooh_hermetic_scholar
+character_type: pc
+identity:
+  name: ""
+  tradition: "Order of Hermes"
+  essence: "Pattern"
+  nature: "Pedagogue"
+  demeanor: "Traditionalist"
+traits:
+  attributes:
+    Strength: 2
+    Dexterity: 2
+    Stamina: 2
+    Charisma: 2
+    Manipulation: 3
+    Appearance: 2
+    Perception: 2
+    Intelligence: 4
+    Wits: 3
+  abilities:
+    Academics: 3
+    Cosmology: 2
+    Enigmas: 2
+    Esoterica: 2
+    Etiquette: 1
+    Occult: 3
+    Science: 1
+  spheres:
+    Forces: 3
+    Prime: 2
+    Matter: 1
+  arete:
+    Arete: 3
+  backgrounds:
+    Avatar: 2
+    Mentor: 2
+    Sanctum: 2
+    Node: 1
+resources:
+  quintessence: 5
+  paradox: 0
+  willpower: 5
+merits_flaws:
+  - { name: "Natural Channel", type: merit, value: 3 }

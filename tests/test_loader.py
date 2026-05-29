@@ -126,7 +126,7 @@ class TestChargenConfigLoading:
         assert splat.chargen_config is not None
         assert "modes" in splat.chargen_config
         assert "traditions" in splat.chargen_config
-        assert len(splat.chargen_config["traditions"]) == 9
+        assert len(splat.chargen_config["traditions"]) == 11
 
     def test_chargen_config_has_all_modes(self):
         loader = SplatLoader(GAME_DIR)
@@ -213,3 +213,44 @@ class TestTemplateExtension:
         # Archmage should allow spheres up to 10
         assert char.schema.get_range("Forces") == (0, 10)
         assert char.identity["name"] == "Archmaster"
+
+
+class TestHollowOnesAndOrphans:
+    """Hollow Ones (quasi-Tradition) and Orphans/Disparates (unaffiliated)."""
+
+    def _tradition(self, splat, trad_id):
+        for t in splat.chargen_config["traditions"]:
+            if t["id"] == trad_id:
+                return t
+        return None
+
+    def test_factions_present_with_affinities(self):
+        loader = SplatLoader(GAME_DIR)
+        splat = loader.load_splat("mage")
+
+        hollow = self._tradition(splat, "hollow_ones")
+        orphans = self._tradition(splat, "orphans")
+        assert hollow is not None
+        assert orphans is not None
+        assert hollow["name"] == "Hollow Ones"
+        assert hollow["affinity_sphere"] == "Entropy"
+        # Orphans choose their own affinity Sphere, so none is fixed.
+        assert orphans["affinity_sphere"] == "Any"
+
+    def test_all_referenced_templates_build(self):
+        loader = SplatLoader(GAME_DIR)
+        splat = loader.load_splat("mage")
+
+        for trad_id in ("hollow_ones", "orphans"):
+            trad = self._tradition(splat, trad_id)
+            assert trad["templates"], f"{trad_id} should ship at least one template"
+            for tmpl in trad["templates"]:
+                # A successful build validates trait names, ranges, and the
+                # "no Sphere exceeds Arete" constraint for the template file.
+                char = loader.load_character_from_template(
+                    "mage", tmpl["file"], identity_override={"name": "Test"}
+                )
+                assert char.identity["name"] == "Test"
+                assert char.identity["tradition"] == trad["name"]
+                assert char.get("Arete") >= 1
+                assert char.resources.has_resource("quintessence")

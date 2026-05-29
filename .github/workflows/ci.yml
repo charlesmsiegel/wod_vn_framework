@@ -1,0 +1,91 @@
+# Continuous integration for the WoD VN Framework.
+#
+# Runs the Python test suite (pytest) and Ren'Py's static analysis
+# (renpy lint) on every push to main and on every pull request.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Least privilege: the jobs only read the repository.
+permissions:
+  contents: read
+
+# Cancel superseded runs for the same branch / PR.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: pytest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Run pytest
+        run: pytest
+
+  lint:
+    name: renpy lint
+    runs-on: ubuntu-latest
+    env:
+      # Ren'Py 8.x SDK used for `renpy lint`. PyYAML ships inside the SDK,
+      # so the framework's init-time `import yaml` resolves without extra
+      # setup. Bump this as new 8.x releases land — the download URL and the
+      # cache key are both derived from it.
+      RENPY_VERSION: "8.3.7"
+      RENPY_SDK_DIR: ${{ github.workspace }}/.renpy-sdk
+      # Ren'Py links against SDL; force headless drivers so it runs on a CI
+      # runner that has no display or audio device.
+      SDL_VIDEODRIVER: dummy
+      SDL_AUDIODRIVER: dummy
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Restore cached Ren'Py SDK
+        id: cache-renpy
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.RENPY_SDK_DIR }}
+          key: renpy-sdk-${{ runner.os }}-${{ env.RENPY_VERSION }}
+
+      - name: Download Ren'Py ${{ env.RENPY_VERSION }} SDK
+        if: steps.cache-renpy.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          url="https://www.renpy.org/dl/${RENPY_VERSION}/renpy-${RENPY_VERSION}-sdk.tar.bz2"
+          echo "Downloading ${url}"
+          curl -fL --retry 3 --retry-delay 5 "${url}" -o /tmp/renpy-sdk.tar.bz2
+          mkdir -p "${RENPY_SDK_DIR}"
+          tar -xjf /tmp/renpy-sdk.tar.bz2 -C "${RENPY_SDK_DIR}" --strip-components=1
+          # Fail loudly if the archive layout is not what we expect.
+          test -x "${RENPY_SDK_DIR}/renpy.sh"
+
+      - name: Save Ren'Py SDK to cache
+        if: steps.cache-renpy.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.RENPY_SDK_DIR }}
+          key: renpy-sdk-${{ runner.os }}-${{ env.RENPY_VERSION }}
+
+      - name: Run renpy lint
+        run: |
+          set -euo pipefail
+          # Ren'Py treats the directory containing game/ as the project root.
+          "${RENPY_SDK_DIR}/renpy.sh" "${GITHUB_WORKSPACE}" lint

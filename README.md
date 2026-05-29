@@ -1,5 +1,7 @@
 # WoD VN Framework
 
+[![CI](https://github.com/charlesmsiegel/wod_vn_framework/actions/workflows/ci.yml/badge.svg)](https://github.com/charlesmsiegel/wod_vn_framework/actions/workflows/ci.yml)
+
 A Ren'Py framework for building World of Darkness visual novels.
 
 ## What is this?

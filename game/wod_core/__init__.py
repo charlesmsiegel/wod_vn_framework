@@ -103,6 +103,12 @@ def chargen(splat_id: str, mode: str = "full", preset: dict | None = None):
         elif result["action"] == "next":
             # Save step data (strip "action" key, keep the rest)
             step_data = {k: v for k, v in result.items() if k != "action"}
+            # Reject invalid priority picks (e.g. the same rank on two groups)
+            # rather than corrupting the downstream allocation pools.
+            ok, msg = state.validate_priority_step(step_name, step_data)
+            if not ok:
+                show_toast(msg)
+                continue
             state.save_step(step_name, step_data)
             state.complete_step(state.current_step)
             state.invalidate_dependents(step_name)

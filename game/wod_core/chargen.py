@@ -18,6 +18,54 @@ _INVALIDATION_MAP = {
     "ability_priority": ["ability_allocate"],      # Priority pool sizes change
 }
 
+# Priority steps map to the config key holding their rank pool (the dot values
+# for Primary / Secondary / Tertiary). Used to validate that each rank is
+# assigned to exactly one group.
+_PRIORITY_RANK_CONFIG = {
+    "attribute_priority": "attribute_priorities",
+    "ability_priority": "ability_priorities",
+}
+
+
+def validate_priorities(
+    assignment: dict[str, int], expected_ranks: list[int]
+) -> tuple[bool, str]:
+    """Validate a priority-step assignment.
+
+    ``assignment`` maps each group to the rank (dot pool) the player gave it,
+    e.g. ``{"physical": 7, "social": 5, "mental": 3}``. ``expected_ranks`` is
+    the configured set of ranks, e.g. ``[7, 5, 3]`` (Primary, Secondary,
+    Tertiary).
+
+    The three ranks must each go to a different group: no group may be left
+    unassigned, and no two groups may share a rank (e.g. two Primaries).
+
+    Returns ``(ok, message)``; ``message`` is empty when valid.
+    """
+    expected = list(expected_ranks)
+    ranks = list(assignment.values())
+
+    # Every group must receive a rank (0 or missing means unassigned).
+    if len(assignment) < len(expected) or any(not r for r in ranks):
+        return False, "Assign a priority to every group before continuing."
+
+    # Each rank must be distinct. This is the core rule a player can violate if
+    # the UI is bypassed: assigning the same rank (e.g. Primary) to two groups.
+    if len(set(ranks)) != len(ranks):
+        return (
+            False,
+            "Each priority must go to a different group — you cannot assign "
+            "the same rank twice.",
+        )
+
+    # The assigned ranks must be exactly the configured Primary/Secondary/
+    # Tertiary values, each used once.
+    if sorted(ranks) != sorted(expected):
+        ordered = sorted(expected, reverse=True)
+        return False, f"Priorities must be assigned from {ordered}, one each."
+
+    return True, ""
+
 
 class ChargenState:
     """Tracks character creation progress across steps."""
@@ -49,6 +97,23 @@ class ChargenState:
                 dep_index = self.steps.index(dep_step_name)
                 self.completed.discard(dep_index)
                 self.data.pop(dep_step_name, None)
+
+    def validate_priority_step(
+        self, step_name: str, assignment: dict[str, int]
+    ) -> tuple[bool, str]:
+        """Validate a priority assignment for ``step_name`` against config.
+
+        Looks up the configured rank pool for the step (e.g. ``[7, 5, 3]`` for
+        attributes) and checks the assignment uses each rank exactly once.
+        Non-priority steps validate trivially, returning ``(True, "")``.
+        """
+        config_key = _PRIORITY_RANK_CONFIG.get(step_name)
+        if config_key is None:
+            return True, ""
+        expected_ranks = self.get_mode_config().get(config_key)
+        if not expected_ranks:
+            return True, ""
+        return validate_priorities(assignment, expected_ranks)
 
     def get_mode_config(self) -> dict:
         return self.config["modes"].get(self.mode, {})

@@ -22,7 +22,7 @@ You write your story in Ren'Py. The framework handles character stats, resource 
 - **Tabbed character sheet** -- toggle with Tab. WoD-style dot display, organized by trait category.
 - **Gothic dark theme** -- serif typography (EB Garamond body, Cinzel headings), dark parchment palette.
 - **Toast notifications** -- brief on-screen messages for gate results, stat changes, or custom alerts.
-- **Bracket shorthand pre-processor** -- write `[Forces >= 3]` in your script; a CLI tool compiles it to native Ren'Py `if` expressions.
+- **Bracket shorthand pre-processor** -- write `[Forces >= 3]` in your script; it compiles to native Ren'Py `if` expressions automatically at init time (no build step), or on demand via the CLI.
 - **Save/load serialization optimization** -- Character objects pickle efficiently by excluding the Schema and reconstructing it on load.
 - **Versioned save migration** -- bump your schema's `version` and old saves are reconciled to the new schema on load: new traits default in, removed traits drop, out-of-range values clamp, and renames are handled by author-registered migration steps.
 - **Author-level splat overrides and template extension** -- add traits, tweak resources, or create archetype variants without modifying the base splat files.
@@ -67,6 +67,7 @@ Click "Use this template" on GitHub to create a new repo, then follow the steps 
 wod_vn_framework/
   game/
     script.rpy              # Demo launcher (chronicle + feature demo)
+    00_wod_preprocess.rpy   # Init-time bracket-shorthand compile (python early)
     chronicle.rpy           # "The Hollow Vigil" — 5-scene demo chronicle
     images.rpy              # Art registry: real files, or auto placeholders
     wod_init.rpy            # Framework bootstrap — loads engine and splats
@@ -77,7 +78,8 @@ wod_vn_framework/
       chargen.py            #   Character creation state machine
       gating.py             #   Module-level gate() and has() delegates
       loader.py             #   YAML splat/character loading
-      syntax.py             #   Bracket shorthand compiler
+      syntax.py             #   Bracket shorthand compiler (line/source transform)
+      preprocess.py         #   File/dir transforms + init-time entry point
       __main__.py           #   CLI entry point (python -m wod_core)
     wod_screens/            # Ren'Py screen definitions
       resource_hud.rpy      #   HUD overlay
@@ -117,7 +119,7 @@ Run the test suite:
 pytest
 ```
 
-The test suite covers the core engine (`test_engine.py`), stat gating (`test_gating.py`), paradigm/Focus gating (`test_paradigm.py`), resource pools (`test_resources.py`), character creation (`test_chargen.py`), bracket syntax compilation (`test_syntax.py`), YAML loading (`test_loader.py`), and end-to-end integration (`test_integration.py`).
+The test suite covers the core engine (`test_engine.py`), stat gating (`test_gating.py`), paradigm/Focus gating (`test_paradigm.py`), resource pools (`test_resources.py`), character creation (`test_chargen.py`), bracket syntax compilation (`test_syntax.py`), the file/init-time preprocessor (`test_preprocess.py`), YAML loading (`test_loader.py`), and end-to-end integration (`test_integration.py`).
 
 ### Engine Architecture
 
@@ -126,6 +128,7 @@ The test suite covers the core engine (`test_engine.py`), stat gating (`test_gat
 - **`loader.py`** -- `SplatLoader` discovers splat directories, loads YAML schemas/resources/chargen configs, and applies author-level overrides. Also loads character files from YAML.
 - **`chargen.py`** -- `ChargenState` tracks multi-step character creation with point pools, step invalidation, and final character building.
 - **`syntax.py`** -- Regex-based compiler that transforms bracket shorthand (`[Forces >= 3]`) into `wod_core.gate()` calls with identifier validation against the schema.
+- **`preprocess.py`** -- Drives the compiler over files and directories (idempotent, in-place rewrite). Powers both the CLI and the init-time pass (`run_init_preprocess()`), which `game/00_wod_preprocess.rpy` calls from a `python early` block so the transform happens before Ren'Py parses the affected files.
 
 ## License
 

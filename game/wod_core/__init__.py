@@ -72,6 +72,11 @@ class _Config:
     """Framework configuration."""
     show_gate_toasts = False
     gate_toast_format = "{trait} {value} — {result}"
+    # When True, bracket shorthand ([Forces >= 3]) is compiled to native
+    # Ren'Py automatically at init time, in developer mode. Disable to manage
+    # the transform yourself via the CLI (python -m wod_core).
+    # See game/00_wod_preprocess.rpy.
+    auto_preprocess = True
 
 config = _Config()
 

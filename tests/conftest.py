@@ -1,6 +1,24 @@
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _isolate_migrations():
+    """Reset the global migration registry around every test.
+
+    ``load_splat`` registers a splat's current schema in a module-level registry
+    (used by save migration). Clearing it before and after each test keeps tests
+    independent and prevents cross-test leakage of registered schemas or the
+    ``strict`` flag.
+    """
+    from wod_core import migrations
+
+    migrations.clear()
+    migrations.strict = False
+    yield
+    migrations.clear()
+    migrations.strict = False
+
+
 @pytest.fixture
 def mage_schema_data():
     """Minimal Mage schema dict for testing."""

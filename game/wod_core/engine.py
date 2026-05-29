@@ -115,9 +115,16 @@ class Paradigm:
 
 
 class Schema:
-    """Splat schema — trait categories, ranges, defaults, constraints, paradigm."""
+    """Splat schema — trait categories, ranges, defaults, constraints, paradigm.
+
+    The ``version`` string identifies the schema revision. Authors bump it
+    whenever they change traits or ranges; on load, a saved character whose
+    recorded version differs from the current schema's version is migrated
+    onto the current schema (see ``wod_core.migrations``).
+    """
 
     def __init__(self, data: dict):
+        self.version: str = str(data.get("version", "0"))
         self.categories: dict[str, CategoryDef] = {}
         self.trait_lookup: dict[str, str] = {}
         self.constraints: list[Constraint] = []
@@ -167,8 +174,16 @@ class Schema:
         return self.paradigm.can_use(method, tradition)
 
     def to_dict(self) -> dict:
-        """Serialize back to a raw schema dict (categories, constraints, paradigm)."""
-        data: dict = {"trait_categories": {}, "trait_constraints": []}
+        """Serialize the schema back to a raw data dict (inverse of __init__).
+
+        Used both for character pickling (storing a schema snapshot) and for
+        override merging in the loader, so the two stay in sync.
+        """
+        data: dict = {
+            "version": self.version,
+            "trait_categories": {},
+            "trait_constraints": [],
+        }
         for cat_name, cat in self.categories.items():
             cat_data: dict = {
                 "display_name": cat.display_name,
@@ -245,8 +260,13 @@ class Character:
         traits: dict[str, int] | None = None,
         merits_flaws: list[dict] | None = None,
         identity: dict | None = None,
+        splat_id: str | None = None,
     ):
         self.schema = schema
+        # The splat this character belongs to. Recorded so that, on load, the
+        # framework can locate the splat's current schema and migrate the save
+        # if the schema version has changed since it was written.
+        self.splat_id = splat_id
         self.traits: dict[str, int] = {}
         self.merits_flaws = merits_flaws or []
         self.identity = identity or {}
@@ -367,26 +387,79 @@ class Character:
         return self._OPERATORS[op](current, value)
 
     def __getstate__(self):
-        """Exclude Schema object from pickle — store reconstructable raw data instead."""
+        """Exclude the Schema object from the pickle — store a snapshot instead.
+
+        The schema is large and reconstructable, so we store its raw data dict
+        and version rather than the live object. The version lets ``__setstate__``
+        detect schema changes and migrate the save on load.
+        """
         state = self.__dict__.copy()
         # Temporary modifiers are reapplied by game logic — never persisted.
         state.pop("modifiers", None)
-        # Schema is large and reconstructable — store the raw data instead
-        if "schema" in state:
-            schema = state.pop("schema")
-            state["_schema_data"] = schema.to_dict() if schema is not None else None
+        schema = state.pop("schema", None)
+        if schema is not None:
+            state["_schema_data"] = schema.to_dict()
+            state["_schema_version"] = schema.version
+        else:
+            state["_schema_data"] = None
+            state["_schema_version"] = None
         return state
 
     def __setstate__(self, state):
-        """Reconstruct Schema from stored raw data."""
+        """Restore the character, migrating it onto the current schema if needed.
+
+        Resolution order:
+
+        1. No current schema registered for this splat (e.g. the engine used
+           outside a loaded game, or a pre-versioning save with no ``splat_id``):
+           reconstruct the saved schema snapshot. This preserves the original
+           behavior and keeps old saves loadable.
+        2. The saved schema version differs from the current one: run save
+           migration (``wod_core.migrations``) to reconcile trait data, then
+           bind to the current schema.
+        3. Same version: reconstruct the snapshot, but re-bind to the shared
+           current schema object when the two are structurally identical. This
+           saves memory and lets identity checks (``splat.schema is char.schema``)
+           succeed, while a template-extended character whose snapshot legitimately
+           differs keeps its own schema.
+        """
         schema_data = state.pop("_schema_data", None)
+        saved_version = state.pop("_schema_version", None)
         self.__dict__.update(state)
-        if schema_data:
-            self.schema = Schema(schema_data)
-        else:
-            self.schema = None
-        # Modifiers are never persisted; a loaded character always starts clean.
+        # Saves written before splat tracking existed lack this attribute.
+        if "splat_id" not in self.__dict__:
+            self.splat_id = None
+        # Temporary modifiers are never persisted (see __getstate__); a loaded
+        # character always starts clean. Set before any early return below so the
+        # attribute always exists, whichever migration path is taken.
         self.modifiers = {}
+
+        current_schema = None
+        if self.splat_id is not None:
+            try:
+                from wod_core import migrations
+                current_schema = migrations.get_current_schema(self.splat_id)
+            except Exception:
+                current_schema = None
+
+        if current_schema is None:
+            self.schema = Schema(schema_data) if schema_data is not None else None
+            return
+
+        if saved_version != current_schema.version:
+            from wod_core import migrations
+            migrations.migrate_character(self, saved_version, current_schema)
+            self.schema = current_schema
+            return
+
+        # Same version — reconstruct the snapshot, re-binding to the shared
+        # current schema when structurally identical.
+        if schema_data is None:
+            self.schema = current_schema
+        elif schema_data == current_schema.to_dict():
+            self.schema = current_schema
+        else:
+            self.schema = Schema(schema_data)
 
     def spend(self, name: str, amount: int) -> bool:
         if self.resources is None:

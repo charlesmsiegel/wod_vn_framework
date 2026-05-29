@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 import yaml
 
+from wod_core import migrations
 from wod_core.engine import Schema, Character
 from wod_core.resources import ResourceManager
 
@@ -95,6 +96,16 @@ class SplatLoader:
                 _apply_overrides(schema_data, resource_config, override_data["overrides"])
 
         schema = Schema(schema_data)
+        # Fall back to the manifest's version if the schema file omits one, so a
+        # single bump in either place triggers save migration.
+        if "version" not in schema_data:
+            manifest_version = manifest["splat"].get("version")
+            if manifest_version is not None:
+                schema.version = str(manifest_version)
+
+        # Register as this splat's current schema so saves written under an
+        # older schema version can be migrated onto it when loaded.
+        migrations.register_current_schema(splat_id, schema)
 
         # Load chargen config if present
         chargen_config = None
@@ -137,6 +148,7 @@ class SplatLoader:
             traits=flat_traits,
             merits_flaws=char_data.get("merits_flaws", []),
             identity=char_data.get("identity", {}),
+            splat_id=splat_id,
         )
 
         # Set up resources
@@ -178,7 +190,7 @@ class SplatLoader:
             if "overrides" in template_data:
                 overrides = template_data["overrides"]
                 # Create modified schema data
-                schema_data_copy = self._schema_to_dict(splat.schema)
+                schema_data_copy = splat.schema.to_dict()
                 _apply_overrides(schema_data_copy, splat.resource_config, overrides)
                 schema = Schema(schema_data_copy)
             else:
@@ -205,6 +217,7 @@ class SplatLoader:
             traits=flat_traits,
             merits_flaws=char_data.get("merits_flaws", []),
             identity=identity,
+            splat_id=splat_id,
         )
 
         # Attach resources
@@ -217,8 +230,3 @@ class SplatLoader:
                     pool.max = res_value
 
         return char
-
-    @staticmethod
-    def _schema_to_dict(schema: Schema) -> dict:
-        """Convert a Schema back to a raw dict for override merging."""
-        return schema.to_dict()

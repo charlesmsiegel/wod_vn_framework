@@ -4,8 +4,23 @@ from __future__ import annotations
 
 __version__ = "0.1.0"
 
+from wod_core import migrations
 from wod_core.gating import gate, has, can_use, set_active, get_active
 from wod_core.loader import SplatLoader
+from wod_core.migrations import (
+    MigrationError,
+    migration,
+    register_migration,
+)
+
+
+def drain_migration_reports() -> list:
+    """Return and clear migration reports produced since the last call.
+
+    Surfaced by the framework's ``after_load`` label to notify the player when
+    a save was migrated onto a newer schema version.
+    """
+    return migrations.drain_reports()
 
 _loader: SplatLoader | None = None
 

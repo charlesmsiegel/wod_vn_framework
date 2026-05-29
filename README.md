@@ -24,6 +24,7 @@ You write your story in Ren'Py. The framework handles character stats, resource 
 - **Toast notifications** -- brief on-screen messages for gate results, stat changes, or custom alerts.
 - **Bracket shorthand pre-processor** -- write `[Forces >= 3]` in your script; a CLI tool compiles it to native Ren'Py `if` expressions.
 - **Save/load serialization optimization** -- Character objects pickle efficiently by excluding the Schema and reconstructing it on load.
+- **Versioned save migration** -- bump your schema's `version` and old saves are reconciled to the new schema on load: new traits default in, removed traits drop, out-of-range values clamp, and renames are handled by author-registered migration steps.
 - **Author-level splat overrides and template extension** -- add traits, tweak resources, or create archetype variants without modifying the base splat files.
 
 ## Quick Start

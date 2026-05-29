@@ -44,10 +44,8 @@ jobs:
     name: renpy lint
     runs-on: ubuntu-latest
     env:
-      # Ren'Py 8.x SDK used for `renpy lint`. PyYAML ships inside the SDK,
-      # so the framework's init-time `import yaml` resolves without extra
-      # setup. Bump this as new 8.x releases land — the download URL and the
-      # cache key are both derived from it.
+      # Ren'Py 8.x SDK used for `renpy lint`. Bump this as new 8.x releases
+      # land — the download URL and the cache key are both derived from it.
       RENPY_VERSION: "8.3.7"
       RENPY_SDK_DIR: ${{ github.workspace }}/.renpy-sdk
       # Ren'Py links against SDL; force headless drivers so it runs on a CI
@@ -57,6 +55,11 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
       - name: Restore cached Ren'Py SDK
         id: cache-renpy
@@ -84,8 +87,29 @@ jobs:
           path: ${{ env.RENPY_SDK_DIR }}
           key: renpy-sdk-${{ runner.os }}-${{ env.RENPY_VERSION }}
 
-      - name: Run renpy lint
+      - name: Provide PyYAML to Ren'Py
         run: |
           set -euo pipefail
+          # `renpy lint` executes init blocks, and the framework imports
+          # PyYAML at init (wod_init.rpy -> wod_core -> loader). Ren'Py's
+          # bundled Python does not ship PyYAML, so drop the pure-Python
+          # package into game/, which Ren'Py adds to sys.path at startup.
+          python -m pip install --quiet --target /tmp/renpy-pydeps "pyyaml>=6.0"
+          cp -r /tmp/renpy-pydeps/yaml "${GITHUB_WORKSPACE}/game/yaml"
+
+      - name: Run renpy lint
+        run: |
           # Ren'Py treats the directory containing game/ as the project root.
-          "${RENPY_SDK_DIR}/renpy.sh" "${GITHUB_WORKSPACE}" lint
+          # Capture the report so it shows up in the job summary even on
+          # failure, then exit with Ren'Py's own status.
+          set +e
+          "${RENPY_SDK_DIR}/renpy.sh" "${GITHUB_WORKSPACE}" lint 2>&1 | tee /tmp/lint-output.txt
+          status="${PIPESTATUS[0]}"
+          {
+            echo "### renpy lint output"
+            echo ''
+            echo '```'
+            cat /tmp/lint-output.txt
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
+          exit "${status}"

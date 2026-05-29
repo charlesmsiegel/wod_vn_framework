@@ -22,6 +22,18 @@ class TestSplatLoader:
         assert splat.schema.has_trait("Arete")
         assert splat.schema.get_range("Strength") == (1, 5)
 
+    def test_load_splat_resonance_category(self):
+        loader = SplatLoader(GAME_DIR)
+        splat = loader.load_splat("mage")
+        schema = splat.schema
+        # The three M20 Resonance types are gateable traits.
+        for rtype in ("Dynamic", "Entropic", "Static"):
+            assert schema.has_trait(rtype)
+            assert schema.trait_lookup[rtype] == "resonance"
+            assert schema.get_range(rtype) == (0, 5)
+            assert schema.get_default(rtype) == 0
+        assert schema.categories["resonance"].display_name == "Resonance"
+
     def test_load_splat_resources(self):
         loader = SplatLoader(GAME_DIR)
         splat = loader.load_splat("mage")

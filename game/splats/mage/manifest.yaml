@@ -24,6 +24,6 @@ splat:
       - name: "Attributes & Abilities"
         categories: [attributes, abilities]
       - name: "Spheres & Backgrounds"
-        categories: [arete, spheres, backgrounds]
+        categories: [arete, spheres, resonance, backgrounds]
       - name: "Merits & Resources"
         categories: []

@@ -5,6 +5,7 @@ identity:
   name: ""
   tradition: "Virtual Adepts"
   essence: "Dynamic"
+  resonance: "Dynamic"
   nature: "Rebel"
   demeanor: "Thrill-Seeker"
 traits:
@@ -32,6 +33,8 @@ traits:
     Prime: 1
   arete:
     Arete: 3
+  resonance:
+    Dynamic: 1
   backgrounds:
     Avatar: 3
     Node: 2

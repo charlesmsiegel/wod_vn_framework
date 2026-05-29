@@ -9,6 +9,7 @@ modes:
     background_dots: 7
     freebie_points: 15
     starting_arete: 1
+    starting_resonance: 1   # dots granted to the chosen Resonance type
     freebie_costs:
       attribute: 5
       ability: 2
@@ -23,6 +24,7 @@ modes:
     ability_dots: 27     # allocatable dots (Abilities start at 0)
     sphere_dots: 6
     starting_arete: 1
+    starting_resonance: 1
 
   template:
     steps: [identity, template_pick, review]

@@ -113,6 +113,7 @@ identity:
   name: "Elena Vasquez"
   tradition: "Virtual Adepts"
   essence: "Dynamic"
+  resonance: "Dynamic"
   nature: "Visionary"
   demeanor: "Architect"
 
@@ -139,6 +140,8 @@ traits:
     Correspondence: 1
   arete:
     Arete: 3
+  resonance:
+    Dynamic: 2
   backgrounds:
     Avatar: 3
     Node: 2
@@ -159,7 +162,7 @@ merits_flaws:
 |-------|----------|-------------|
 | `schema` | Yes | Which splat to use (e.g. `mage`). Must match a loaded splat ID. |
 | `identity` | No | Freeform dict: name, tradition, essence, nature, demeanor, etc. |
-| `traits` | No | Nested by category (attributes, abilities, spheres, arete, backgrounds). Omitted traits get the schema default. |
+| `traits` | No | Nested by category (attributes, abilities, spheres, arete, resonance, backgrounds). Omitted traits get the schema default. |
 | `resources` | No | Override starting resource values. Omitted resources get their YAML defaults. |
 | `merits_flaws` | No | List of `{name, type, value}` dicts. |
 
@@ -261,6 +264,27 @@ if pc.has("Avatar Companion"):
 ```
 
 `pc.has(name)` returns `True` if any entry in the character's `merits_flaws` list has a matching `name` field.
+
+### Gating on Resonance
+
+Resonance is the flavor a mage's magick leaves on reality. In M20 it comes in three types -- **Dynamic** (change, passion, chaos), **Entropic** (decay, fate, balance), and **Static** (stability, order, stasis). The framework models each type as an ordinary trait rated 0--5, so you gate on it exactly like a Sphere or Ability:
+
+```renpy
+if pc.gate("Dynamic", ">=", 2):
+    "Your restless, change-hungry Resonance floods the breach. The rigid Static ward sloughs apart."
+
+menu:
+    "Let the decay spread" if pc.gate("Entropic", ">=", 1):
+        jump entropic_path
+
+    "Hold the pattern steady" if pc.gate("Static", ">=", 1):
+        jump static_path
+
+    "Force the change" if pc.gate("Dynamic", ">=", 3):
+        jump dynamic_path
+```
+
+Because Resonance lives in `schema.yaml`, the bracket shorthand validates the type names just like any other trait: `[Static >= 2]` compiles to `wod_core.gate("Static", ">=", 2)`. A beginning mage created through chargen picks one type and starts with a single dot; you can raise it with `pc.advance("Dynamic")` during the story. See [Section 10](#10-data-files) for the `resonance` category definition.
 
 ### Module-Level Gating
 
@@ -473,7 +497,7 @@ elena "Welcome, [pc.identity['name']]."
 
 The traditional Mage: The Ascension creation process:
 
-1. **Identity** -- Name, Tradition, Nature, Demeanor, Essence.
+1. **Identity** -- Name, Tradition, Resonance, Nature, Demeanor, Essence. The chosen Resonance type starts at one dot.
 2. **Attribute Priority** -- Assign primary/secondary/tertiary to Physical/Social/Mental (pools of 7/5/3).
 3. **Attribute Allocation** -- Distribute dots within each priority tier.
 4. **Ability Priority** -- Same for Talents/Skills/Knowledges (pools of 13/9/5), max 3 per Ability at creation.
@@ -486,7 +510,7 @@ The traditional Mage: The Ascension creation process:
 
 A streamlined version for quicker setup:
 
-1. **Identity** -- Name, Tradition, Nature, Demeanor, Essence.
+1. **Identity** -- Name, Tradition, Resonance, Nature, Demeanor, Essence.
 2. **Attributes** -- 15 allocatable dots on top of the free 1 per Attribute (total 24).
 3. **Abilities** -- 27 allocatable dots.
 4. **Spheres** -- 6 Sphere dots.
@@ -706,6 +730,12 @@ trait_categories:
     default: 1
     range: [1, 10]
 
+  resonance:
+    display_name: "Resonance"
+    traits: [Dynamic, Entropic, Static]
+    default: 0
+    range: [0, 5]
+
 trait_constraints:
   - type: max_linked
     target_category: spheres
@@ -718,6 +748,8 @@ Key concepts:
 - **`traits`** is a flat list (used when grouping is not needed, e.g., Spheres).
 - **`trait_constraints`** enforce rules like "no Sphere can exceed Arete." The `max_linked` type caps all traits in `target_category` by the value of `limited_by`.
 - Trait names must be unique across all categories.
+
+The **`resonance`** category models M20 Resonance as three rated traits -- Dynamic, Entropic, and Static. Because it is an ordinary trait category, Resonance works with every framework feature automatically: gating (`[Static >= 2]`), the character sheet (it appears on the Spheres & Backgrounds tab via `manifest.yaml`), chargen (the identity step offers a Resonance picker and grants `starting_resonance` dots), and save/load. To rename or extend the types, edit this category or append to it with a [splat override](#11-customization) -- chargen reads the type list straight from the schema.
 
 ### resources.yaml
 

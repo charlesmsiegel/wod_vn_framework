@@ -53,11 +53,16 @@ screen chargen_identity(state):
     default selected_essence = state.data.get("identity", {}).get("essence", "")
     default selected_nature = state.data.get("identity", {}).get("nature", "")
     default selected_demeanor = state.data.get("identity", {}).get("demeanor", "")
+    default selected_resonance = state.data.get("identity", {}).get("resonance", "")
 
     $ traditions = state.get_traditions()
     $ archetypes = state.get_archetypes()
     $ essences = state.get_essences()
+    $ resonance_types = state.get_resonance_types()
     $ is_full = (state.mode == "full")
+    # Resonance is a real (gateable) trait, so offer it in full and simplified
+    # creation. Template mode skips it — the template file sets Resonance.
+    $ show_resonance = (state.mode != "template")
 
     # Check if we can proceed
     $ can_proceed = len(name_input) > 0 and len(selected_tradition) > 0
@@ -123,6 +128,22 @@ screen chargen_identity(state):
                                         text_hover_color "#ffffff"
                                         action SetScreenVariable("selected_tradition", trad_name)
 
+                        if show_resonance and resonance_types:
+                            null height 10
+
+                            # Resonance picker — the flavor of the mage's magick
+                            text "Resonance:" size 16 color "#e0e0e0"
+                            text "The signature your magick leaves on reality. Begins at one dot." size 12 color "#888888"
+                            hbox:
+                                spacing 15
+                                for rtype in resonance_types:
+                                    $ res_color = "#c9a96e" if selected_resonance == rtype else "#888888"
+                                    textbutton "[rtype]":
+                                        text_size 14
+                                        text_color res_color
+                                        text_hover_color "#ffffff"
+                                        action SetScreenVariable("selected_resonance", rtype)
+
                         if is_full:
                             null height 10
 
@@ -179,7 +200,7 @@ screen chargen_identity(state):
                         null height 20
 
                         if can_proceed:
-                            $ next_result = {"action": "next", "name": name_input, "tradition": selected_tradition, "essence": selected_essence, "nature": selected_nature, "demeanor": selected_demeanor}
+                            $ next_result = {"action": "next", "name": name_input, "tradition": selected_tradition, "essence": selected_essence, "nature": selected_nature, "demeanor": selected_demeanor, "resonance": selected_resonance}
                             textbutton "Next Step >>":
                                 text_size 18
                                 text_color "#c9a96e"
@@ -1085,6 +1106,7 @@ screen chargen_review(state):
     $ essence = identity.get("essence", "")
     $ nature = identity.get("nature", "")
     $ demeanor = identity.get("demeanor", "")
+    $ resonance = identity.get("resonance", "")
 
     # Gather trait data depending on mode
     $ attr_data = state.data.get("attribute_allocate", state.data.get("attributes", {}))
@@ -1129,6 +1151,8 @@ screen chargen_review(state):
                             text "Tradition: [tradition]" size 14 color "#e0e0e0"
                         if len(essence) > 0:
                             text "Essence: [essence]" size 14 color "#e0e0e0"
+                        if len(resonance) > 0:
+                            text "Resonance: [resonance]" size 14 color "#e0e0e0"
                         if len(nature) > 0:
                             text "Nature: [nature] / Demeanor: [demeanor]" size 14 color "#e0e0e0"
 

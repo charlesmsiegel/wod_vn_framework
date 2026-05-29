@@ -1,5 +1,6 @@
 # Demo character: Elena Vasquez, Virtual Adept
 # Forces 3, Prime 2, Technology 3, Awareness 2 — all demo branches are reachable.
+# Dynamic 2 Resonance contrasts with the Technocratic ward's Static Pattern.
 schema: mage
 template: default_mage
 character_type: pc
@@ -8,6 +9,7 @@ identity:
   name: "Elena Vasquez"
   tradition: "Virtual Adepts"
   essence: "Dynamic"
+  resonance: "Dynamic"
   nature: "Visionary"
   demeanor: "Architect"
 
@@ -34,6 +36,8 @@ traits:
     Correspondence: 1
   arete:
     Arete: 3
+  resonance:
+    Dynamic: 2
   backgrounds:
     Avatar: 3
     Node: 2

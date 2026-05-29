@@ -14,6 +14,7 @@ You write your story in Ren'Py. The framework handles character stats, resource 
 - **Data-driven splat packs** -- Mage: The Ascension ships built-in; extensible to Vampire, Werewolf, and custom splats.
 - **Resource pools with linked constraints** -- Quintessence and Paradox share a 20-point Wheel; gaining one reduces the other.
 - **Character creation** -- three modes: Full M20 (priority-based allocation), Simplified (flat dot pools), and Template (pick a pre-built archetype).
+- **Resonance** -- Dynamic/Entropic/Static traits color a mage's magick; gate story branches on them like any other stat.
 - **Persistent HUD** -- Quintessence/Paradox split bar, Willpower pips, Health track. Survives save/load.
 - **Tabbed character sheet** -- toggle with Tab. WoD-style dot display, organized by trait category.
 - **Gothic dark theme** -- serif typography (EB Garamond body, Cinzel headings), dark parchment palette.

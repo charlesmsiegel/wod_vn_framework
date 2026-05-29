@@ -5,6 +5,8 @@ import yaml
 from wod_core.chargen import (
     ChargenState,
     PointPool,
+    FreebieCalculator,
+    MAX_FLAW_POINTS,
     build_character,
     validate_priorities,
 )
@@ -34,6 +36,18 @@ _TEMPLATE_IDS = [
 def mage_splat():
     loader = SplatLoader(GAME_DIR)
     return loader.load_splat("mage")
+
+
+@pytest.fixture
+def full_mode_config(mage_splat):
+    """The 'full' chargen mode config (carries freebie costs/points)."""
+    return mage_splat.chargen_config["modes"]["full"]
+
+
+@pytest.fixture
+def freebie_calc(mage_splat, full_mode_config):
+    """FreebieCalculator built from the real Mage chargen config."""
+    return FreebieCalculator.from_config(mage_splat.schema, full_mode_config)
 
 
 class TestChargenState:
@@ -395,3 +409,231 @@ class TestTraditionTemplates:
                 assert mf["name"] in merit_names, f"unknown merit {mf['name']!r}"
             elif mf["type"] == "flaw":
                 assert mf["name"] in flaw_names, f"unknown flaw {mf['name']!r}"
+
+
+class TestFreebieCostConfig:
+    """The chargen config carries the documented M20 freebie costs."""
+
+    def test_per_category_costs_match_m20(self, full_mode_config):
+        costs = full_mode_config["freebie_costs"]
+        assert costs["attribute"] == 5
+        assert costs["ability"] == 2
+        assert costs["sphere"] == 7
+        assert costs["background"] == 1
+        assert costs["willpower"] == 1
+
+    def test_freebie_points_is_15(self, full_mode_config):
+        assert full_mode_config["freebie_points"] == 15
+
+    def test_max_flaw_points_is_7(self, full_mode_config):
+        assert full_mode_config["max_flaw_points"] == 7
+
+    def test_merits_have_positive_costs(self, mage_splat):
+        merits = mage_splat.chargen_config["merits"]
+        assert merits  # config defines at least one merit
+        for merit in merits:
+            assert merit["cost"] > 0, f"{merit['name']} should cost a positive value"
+
+    def test_flaws_have_negative_costs(self, mage_splat):
+        flaws = mage_splat.chargen_config["flaws"]
+        assert flaws
+        for flaw in flaws:
+            assert flaw["cost"] < 0, f"{flaw['name']} should have a negative cost"
+
+
+class TestFreebieCalculatorConstruction:
+    """from_config and default construction wire up the expected values."""
+
+    def test_from_config_reads_base_points(self, freebie_calc):
+        assert freebie_calc.base_points == 15
+
+    def test_from_config_reads_max_flaw_points(self, freebie_calc):
+        assert freebie_calc.max_flaw_points == 7
+
+    def test_default_max_flaw_points_constant(self):
+        assert MAX_FLAW_POINTS == 7
+
+    def test_defaults_when_no_config(self, mage_splat):
+        # With no freebie_costs supplied, the M20 defaults apply.
+        calc = FreebieCalculator(mage_splat.schema)
+        assert calc.trait_cost("Strength", 1) == 5
+        assert calc.trait_cost("Technology", 1) == 2
+        assert calc.trait_cost("Forces", 1) == 7
+        assert calc.trait_cost("Avatar", 1) == 1
+        assert calc.trait_cost("willpower", 1) == 1
+        assert calc.max_flaw_points == 7
+
+
+class TestFreebieTraitCosts:
+    """Per-category dot costs: Attribute=5, Ability=2, Sphere=7, etc."""
+
+    @pytest.mark.parametrize("trait,expected_rate", [
+        ("Strength", 5),       # attribute
+        ("Intelligence", 5),   # attribute
+        ("Technology", 2),     # ability (skill)
+        ("Occult", 2),         # ability (knowledge)
+        ("Forces", 7),         # sphere
+        ("Correspondence", 7), # sphere
+        ("Avatar", 1),         # background
+        ("Node", 1),           # background
+        ("willpower", 1),      # resource (matched by name)
+    ])
+    def test_cost_rate_per_category(self, freebie_calc, trait, expected_rate):
+        assert freebie_calc.cost_rate(trait) == expected_rate
+
+    def test_attribute_dot_costs_5(self, freebie_calc):
+        assert freebie_calc.trait_cost("Strength", 1) == 5
+
+    def test_attribute_multiple_dots(self, freebie_calc):
+        assert freebie_calc.trait_cost("Strength", 3) == 15
+
+    def test_ability_dot_costs_2(self, freebie_calc):
+        assert freebie_calc.trait_cost("Technology", 1) == 2
+        assert freebie_calc.trait_cost("Technology", 4) == 8
+
+    def test_sphere_dot_costs_7(self, freebie_calc):
+        assert freebie_calc.trait_cost("Forces", 1) == 7
+        assert freebie_calc.trait_cost("Forces", 2) == 14
+
+    def test_background_dot_costs_1(self, freebie_calc):
+        assert freebie_calc.trait_cost("Avatar", 1) == 1
+        assert freebie_calc.trait_cost("Avatar", 5) == 5
+
+    def test_willpower_dot_costs_1(self, freebie_calc):
+        # Willpower is a resource, not a schema trait — matched by name.
+        assert freebie_calc.trait_cost("willpower", 1) == 1
+        assert freebie_calc.trait_cost("willpower", 3) == 3
+
+    def test_zero_dots_cost_nothing(self, freebie_calc):
+        assert freebie_calc.trait_cost("Strength", 0) == 0
+
+    def test_negative_dots_cost_nothing(self, freebie_calc):
+        assert freebie_calc.trait_cost("Strength", -2) == 0
+
+    def test_uncosted_category_is_free(self, freebie_calc):
+        # Arete is a real trait but not a freebie-spendable category.
+        assert freebie_calc.cost_rate("Arete") == 0
+        assert freebie_calc.trait_cost("Arete", 3) == 0
+
+    def test_unknown_trait_is_free(self, freebie_calc):
+        assert freebie_calc.trait_cost("Nonexistent", 2) == 0
+
+    def test_traits_cost_sums_mixed_categories(self, freebie_calc):
+        additions = {"Strength": 1, "Technology": 2, "Forces": 1, "Avatar": 3}
+        # 1*5 + 2*2 + 1*7 + 3*1 = 19
+        assert freebie_calc.traits_cost(additions) == 19
+
+    def test_traits_cost_empty(self, freebie_calc):
+        assert freebie_calc.traits_cost({}) == 0
+
+
+class TestFreebieMerits:
+    """Merits cost their listed point value."""
+
+    def test_merit_cost_matches_listed_value(self, freebie_calc):
+        assert freebie_calc.merits_cost([{"name": "X", "cost": 3}]) == 3
+
+    def test_multiple_merits_sum(self, freebie_calc):
+        merits = [{"name": "A", "cost": 3}, {"name": "B", "cost": 5}]
+        assert freebie_calc.merits_cost(merits) == 8
+
+    def test_merit_uses_value_when_cost_absent(self, freebie_calc):
+        assert freebie_calc.merits_cost([{"name": "X", "value": 4}]) == 4
+
+    def test_no_merits_cost_nothing(self, freebie_calc):
+        assert freebie_calc.merits_cost([]) == 0
+
+    def test_config_merits_charged_listed_value(self, freebie_calc, mage_splat):
+        # Each Merit defined in the config is charged exactly its listed cost.
+        for merit in mage_splat.chargen_config["merits"]:
+            assert freebie_calc.merits_cost([merit]) == merit["cost"]
+
+
+class TestFreebieFlawCap:
+    """Flaws grant freebie points, capped at 7 (M20 standard)."""
+
+    def test_flaw_points_below_cap(self, freebie_calc):
+        assert freebie_calc.flaw_points([{"name": "Blind", "cost": -6}]) == 6
+
+    def test_flaw_points_exactly_at_cap(self, freebie_calc):
+        flaws = [{"name": "Blind", "cost": -6}, {"name": "Nightmares", "cost": -1}]
+        assert freebie_calc.flaw_points(flaws) == 7
+
+    def test_flaw_points_capped_above_seven(self, freebie_calc):
+        flaws = [{"name": "Blind", "cost": -6}, {"name": "Sphere Inept", "cost": -5}]
+        assert freebie_calc.raw_flaw_points(flaws) == 11
+        assert freebie_calc.flaw_points(flaws) == 7  # capped
+
+    def test_raw_flaw_points_uncapped(self, freebie_calc):
+        flaws = [{"cost": -6}, {"cost": -5}, {"cost": -1}]
+        assert freebie_calc.raw_flaw_points(flaws) == 12
+
+    def test_no_flaws_grant_nothing(self, freebie_calc):
+        assert freebie_calc.flaw_points([]) == 0
+        assert freebie_calc.raw_flaw_points([]) == 0
+
+    def test_can_add_flaw_within_cap(self, freebie_calc):
+        assert freebie_calc.can_add_flaw([{"cost": -6}], {"cost": -1}) is True
+
+    def test_can_add_flaw_exactly_filling_cap(self, freebie_calc):
+        assert freebie_calc.can_add_flaw([], {"cost": -7}) is True
+
+    def test_cannot_add_flaw_exceeding_cap(self, freebie_calc):
+        assert freebie_calc.can_add_flaw([{"cost": -6}], {"cost": -5}) is False
+
+    def test_cannot_add_flaw_when_already_at_cap(self, freebie_calc):
+        assert freebie_calc.can_add_flaw([{"cost": -7}], {"cost": -1}) is False
+
+    def test_cap_is_configurable(self, mage_splat):
+        calc = FreebieCalculator(mage_splat.schema, max_flaw_points=5)
+        assert calc.flaw_points([{"cost": -6}]) == 5
+
+
+class TestFreebieBudget:
+    """Budget, spending, remaining, and validity."""
+
+    def test_base_budget_no_flaws(self, freebie_calc):
+        assert freebie_calc.total_budget([]) == 15
+
+    def test_budget_includes_flaw_points(self, freebie_calc):
+        flaws = [{"cost": -6}, {"cost": -1}]
+        assert freebie_calc.total_budget(flaws) == 22  # 15 + 7
+
+    def test_budget_caps_flaw_contribution(self, freebie_calc):
+        # 11 raw flaw points only add the capped 7 to the budget.
+        flaws = [{"cost": -6}, {"cost": -5}]
+        assert freebie_calc.total_budget(flaws) == 22
+
+    def test_total_spent_traits_and_merits(self, freebie_calc):
+        spent = freebie_calc.total_spent({"Strength": 1}, [{"cost": 3}])
+        assert spent == 8  # 5 + 3
+
+    def test_remaining_within_budget(self, freebie_calc):
+        remaining = freebie_calc.remaining({"Strength": 1}, [{"cost": 3}], [])
+        assert remaining == 7  # 15 - 8
+
+    def test_remaining_with_flaw_refund(self, freebie_calc):
+        remaining = freebie_calc.remaining({}, [], [{"cost": -6}])
+        assert remaining == 21  # (15 + 6) - 0
+
+    def test_is_valid_within_budget(self, freebie_calc):
+        assert freebie_calc.is_valid({"Strength": 1}, [{"cost": 3}], []) is True
+
+    def test_is_valid_exactly_at_budget(self, freebie_calc):
+        # 3 sphere dots = 21; budget 15 + 6 flaw = 21 → exactly spent.
+        assert freebie_calc.remaining({"Forces": 3}, [], [{"cost": -6}]) == 0
+        assert freebie_calc.is_valid({"Forces": 3}, [], [{"cost": -6}]) is True
+
+    def test_overspend_is_invalid(self, freebie_calc):
+        # 3 sphere dots = 21 > 15 budget.
+        assert freebie_calc.remaining({"Forces": 3}, [], []) == -6
+        assert freebie_calc.is_valid({"Forces": 3}, [], []) is False
+
+    def test_flaws_beyond_cap_do_not_fund_overspend(self, freebie_calc):
+        # Selecting 11 raw flaw points only funds 7, so a 22-point spend fails
+        # if it relied on more than the cap.
+        flaws = [{"cost": -6}, {"cost": -5}]  # raw 11, capped 7 → budget 22
+        # Spend 4 attributes (20) + 1 background (1) = 21 ≤ 22 → valid
+        assert freebie_calc.is_valid({"Strength": 4, "Avatar": 1}, [], flaws) is True
+        # Spend 4 attributes (20) + 3 backgrounds (3) = 23 > 22 → invalid
+        assert freebie_calc.is_valid({"Strength": 4, "Avatar": 3}, [], flaws) is False

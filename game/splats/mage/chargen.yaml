@@ -8,6 +8,7 @@ modes:
     sphere_dots: 6
     background_dots: 7
     freebie_points: 15
+    max_flaw_points: 7    # Flaws grant at most 7 freebie points (M20 standard)
     starting_arete: 1
     starting_resonance: 1   # dots granted to the chosen Resonance type
     freebie_costs:

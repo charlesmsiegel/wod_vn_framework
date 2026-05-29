@@ -946,8 +946,6 @@ screen chargen_freebies(state):
     modal True
 
     $ mode_config = state.config["modes"]["full"]
-    $ freebie_total = mode_config.get("freebie_points", 15)
-    $ freebie_costs = mode_config.get("freebie_costs", {})
     $ available_merits = state.config.get("merits", [])
     $ available_flaws = state.config.get("flaws", [])
     $ prev_data = state.data.get("freebies", {})
@@ -962,27 +960,16 @@ screen chargen_freebies(state):
                 selected_merits = list(prev_data.get("merits", []))
                 selected_flaws = list(prev_data.get("flaws", []))
 
-    # Calculate spent freebies
-    $ merit_cost = sum(m.get("cost", m.get("value", 0)) for m in selected_merits)
-    $ flaw_refund = sum(abs(f.get("cost", f.get("value", 0))) for f in selected_flaws)
-    $ trait_cost = 0
+    # Freebie math — single source of truth: wod_core.chargen.FreebieCalculator
     python:
-        trait_cost = 0
-        for tname, dots in trait_adds.items():
-            cat_name = state.schema.trait_lookup.get(tname, "")
-            cat = state.schema.categories.get(cat_name)
-            if cat_name == "attributes":
-                trait_cost += dots * freebie_costs.get("attribute", 5)
-            elif cat_name == "abilities":
-                trait_cost += dots * freebie_costs.get("ability", 2)
-            elif cat_name == "spheres":
-                trait_cost += dots * freebie_costs.get("sphere", 7)
-            elif cat_name == "backgrounds":
-                trait_cost += dots * freebie_costs.get("background", 1)
-
-    $ total_spent = trait_cost + merit_cost
-    $ total_budget = freebie_total + flaw_refund
-    $ remaining = total_budget - total_spent
+        from wod_core.chargen import FreebieCalculator
+        freebie_calc = FreebieCalculator.from_config(state.schema, mode_config)
+        merit_cost = freebie_calc.merits_cost(selected_merits)
+        flaw_refund = freebie_calc.flaw_points(selected_flaws)   # capped (max 7)
+        trait_cost = freebie_calc.traits_cost(trait_adds)
+        total_spent = merit_cost + trait_cost
+        total_budget = freebie_calc.total_budget(selected_flaws)
+        remaining = total_budget - total_spent
 
     frame:
         xfill True
@@ -1078,11 +1065,17 @@ screen chargen_freebies(state):
                                     else:
                                         $ new_flaw_entry = {"name": f_name, "type": "flaw", "cost": f_cost, "value": f_cost}
                                         $ new_flaws = list(selected_flaws) + [new_flaw_entry]
-                                        textbutton "[f_name] (Refund: +[f_refund]) - [f_desc]":
-                                            text_size 13
-                                            text_color "#888888"
-                                            text_hover_color "#ffffff"
-                                            action SetScreenVariable("selected_flaws", new_flaws)
+                                        if freebie_calc.can_add_flaw(selected_flaws, new_flaw_entry):
+                                            textbutton "[f_name] (Refund: +[f_refund]) - [f_desc]":
+                                                text_size 13
+                                                text_color "#888888"
+                                                text_hover_color "#ffffff"
+                                                action SetScreenVariable("selected_flaws", new_flaws)
+                                        else:
+                                            textbutton "[f_name] (Refund: +[f_refund]) — Flaw cap reached":
+                                                text_size 13
+                                                text_color "#555555"
+                                                sensitive False
 
                         null height 15
 

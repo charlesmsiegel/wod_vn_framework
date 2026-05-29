@@ -187,6 +187,135 @@ class PointPool:
         self._allocations.clear()
 
 
+# M20 standard: a character may take at most 7 points of Flaws for freebies.
+MAX_FLAW_POINTS = 7
+
+# Maps a schema trait-category name to its key in the ``freebie_costs`` config.
+_FREEBIE_COST_KEYS = {
+    "attributes": "attribute",
+    "abilities": "ability",
+    "spheres": "sphere",
+    "backgrounds": "background",
+}
+
+# Per-category freebie costs (M20), used when a key is absent from config.
+_DEFAULT_FREEBIE_COSTS = {
+    "attribute": 5,
+    "ability": 2,
+    "sphere": 7,
+    "background": 1,
+    "willpower": 1,
+}
+
+
+def _entry_points(entry: dict) -> int:
+    """Point value of a Merit/Flaw entry (positive = Merit, negative = Flaw)."""
+    return entry.get("cost", entry.get("value", 0))
+
+
+class FreebieCalculator:
+    """Computes freebie-point costs and validates spending against the budget.
+
+    Pure calculator (no mutable allocation state): the current selections are
+    passed in to each method. Encapsulates the M20 freebie rules so the same
+    logic backs both the chargen UI and its tests:
+
+      * Trait dots cost a per-category rate read from ``freebie_costs``
+        (Attribute=5, Ability=2, Sphere=7, Background=1, Willpower=1).
+      * Merits cost their listed point value.
+      * Flaws grant freebie points equal to their value, capped in total at
+        ``max_flaw_points`` (7 by M20 standard).
+    """
+
+    def __init__(
+        self,
+        schema,
+        freebie_costs: dict | None = None,
+        base_points: int = 15,
+        max_flaw_points: int = MAX_FLAW_POINTS,
+    ):
+        self.schema = schema
+        self.costs = dict(_DEFAULT_FREEBIE_COSTS)
+        if freebie_costs:
+            self.costs.update(freebie_costs)
+        self.base_points = base_points
+        self.max_flaw_points = max_flaw_points
+
+    @classmethod
+    def from_config(cls, schema, mode_config: dict) -> "FreebieCalculator":
+        """Build a calculator from a chargen mode-config dict."""
+        return cls(
+            schema=schema,
+            freebie_costs=mode_config.get("freebie_costs"),
+            base_points=mode_config.get("freebie_points", 15),
+            max_flaw_points=mode_config.get("max_flaw_points", MAX_FLAW_POINTS),
+        )
+
+    # --- per-trait costs -------------------------------------------------
+
+    def cost_rate(self, trait_name: str) -> int:
+        """Freebie cost for a single dot of ``trait_name`` (0 if uncosted)."""
+        # Willpower is a resource, not a schema trait, so match it by name.
+        if trait_name.lower() == "willpower":
+            return self.costs.get("willpower", 0)
+        cat_name = self.schema.trait_lookup.get(trait_name, "") if self.schema else ""
+        cost_key = _FREEBIE_COST_KEYS.get(cat_name)
+        if cost_key is None:
+            return 0
+        return self.costs.get(cost_key, 0)
+
+    def trait_cost(self, trait_name: str, dots: int) -> int:
+        """Total freebie cost to add ``dots`` dots to ``trait_name``."""
+        if dots <= 0:
+            return 0
+        return dots * self.cost_rate(trait_name)
+
+    def traits_cost(self, trait_additions: dict) -> int:
+        """Total freebie cost across a ``{trait_name: dots}`` mapping."""
+        return sum(self.trait_cost(t, d) for t, d in trait_additions.items())
+
+    # --- merits ----------------------------------------------------------
+
+    @staticmethod
+    def merits_cost(merits: list) -> int:
+        """Total freebie cost of selected Merits (their listed values)."""
+        return sum(_entry_points(m) for m in merits)
+
+    # --- flaws -----------------------------------------------------------
+
+    @staticmethod
+    def raw_flaw_points(flaws: list) -> int:
+        """Sum of Flaw point values before applying the cap."""
+        return sum(abs(_entry_points(f)) for f in flaws)
+
+    def flaw_points(self, flaws: list) -> int:
+        """Freebie points granted by Flaws, capped at ``max_flaw_points``."""
+        return min(self.raw_flaw_points(flaws), self.max_flaw_points)
+
+    def can_add_flaw(self, current_flaws: list, flaw: dict) -> bool:
+        """Whether selecting ``flaw`` keeps total Flaw points within the cap."""
+        projected = self.raw_flaw_points(current_flaws) + abs(_entry_points(flaw))
+        return projected <= self.max_flaw_points
+
+    # --- budget ----------------------------------------------------------
+
+    def total_budget(self, flaws: list) -> int:
+        """Base freebies plus the (capped) points granted by Flaws."""
+        return self.base_points + self.flaw_points(flaws)
+
+    def total_spent(self, trait_additions: dict, merits: list) -> int:
+        """Freebies spent on trait additions and Merits."""
+        return self.traits_cost(trait_additions) + self.merits_cost(merits)
+
+    def remaining(self, trait_additions: dict, merits: list, flaws: list) -> int:
+        """Freebies left after spending (negative if overspent)."""
+        return self.total_budget(flaws) - self.total_spent(trait_additions, merits)
+
+    def is_valid(self, trait_additions: dict, merits: list, flaws: list) -> bool:
+        """True if spending does not exceed the available budget."""
+        return self.remaining(trait_additions, merits, flaws) >= 0
+
+
 def build_character(state: ChargenState) -> Character:
     """Convert a completed ChargenState into a Character object."""
     if state.mode == "template":

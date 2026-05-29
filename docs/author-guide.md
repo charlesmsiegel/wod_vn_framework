@@ -559,7 +559,7 @@ $ wod_core.hide_hud()
 The HUD displays:
 - **Quintessence/Paradox** as a split bar (reflecting the Wheel).
 - **Willpower** as dot pips.
-- **Health** as a damage track.
+- **Health** as a damage track. Damaged boxes are colored by the wound penalty of the level they fill — green (no penalty), yellow (-1), orange (-2), red (-5), and black (Incapacitated) — so severity reads at a glance. These colors live in the gothic theme as `gui.health_severity_*` defines in `game/gui.rpy`; override them there to restyle the track.
 
 ### Save/Load Persistence
 

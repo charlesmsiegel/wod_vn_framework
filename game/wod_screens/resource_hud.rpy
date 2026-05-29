@@ -4,6 +4,25 @@
 default wod_hud_visible = False
 default wod_hud_resources = None
 
+init python:
+    def wod_health_box_color(pool, index, damaged):
+        """Color for the health box at ``index`` in the resource HUD.
+
+        Undamaged boxes use the unmarked color. Damaged boxes are tinted by the
+        wound penalty of the level they occupy (see resources.penalty_severity),
+        using the gothic-theme colors defined in gui.rpy.
+        """
+        if index >= damaged:
+            return gui.health_unmarked_color
+        colors = {
+            "none": gui.health_severity_none_color,
+            "minor": gui.health_severity_minor_color,
+            "moderate": gui.health_severity_moderate_color,
+            "severe": gui.health_severity_severe_color,
+            "incapacitated": gui.health_severity_incapacitated_color,
+        }
+        return colors.get(pool.severity_at(index), gui.health_severity_severe_color)
+
 screen resource_hud():
     zorder 100
 
@@ -91,16 +110,10 @@ screen resource_hud():
                         hbox:
                             spacing 3
                             for i in range(hp_max):
-                                if i < hp_damaged:
-                                    frame:
-                                        xsize 14
-                                        ysize 14
-                                        background "#8b4545"
-                                else:
-                                    frame:
-                                        xsize 14
-                                        ysize 14
-                                        background "#333333"
+                                frame:
+                                    xsize 14
+                                    ysize 14
+                                    background wod_health_box_color(res.pools["health"], i, hp_damaged)
                         text "Health" size 12 color "#8a7e6c"
 
             # Spacer pushes sheet button to the right

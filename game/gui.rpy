@@ -55,6 +55,20 @@ define gui.text_color = "#d4c5a9"
 define gui.interface_text_color = "#d4c5a9"
 
 
+## Health track ################################################################
+##
+## Colors for the health track boxes in the resource HUD. Damaged boxes are
+## tinted by the wound penalty of the level they occupy, so severity reads at a
+## glance; undamaged boxes use the unmarked color. Penalties map to tiers in
+## wod_core.resources.penalty_severity.
+define gui.health_unmarked_color = "#333333"               # undamaged box
+define gui.health_severity_none_color = "#4a7a3f"          # no penalty — green
+define gui.health_severity_minor_color = "#b3a033"         # -1 penalty — yellow
+define gui.health_severity_moderate_color = "#bf7330"      # -2 penalty — orange
+define gui.health_severity_severe_color = "#8b4545"        # -5 penalty — red
+define gui.health_severity_incapacitated_color = "#16161c" # Incapacitated — black
+
+
 ## Fonts and Font Sizes ########################################################
 
 ## The font used for in-game text.

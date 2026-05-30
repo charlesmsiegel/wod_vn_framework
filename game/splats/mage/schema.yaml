@@ -107,3 +107,33 @@ trait_constraints:
     target_category: spheres
     limited_by: Arete
     rule: "No Sphere can exceed Arete rating"
+
+# Optional paradigm/focus system. Each Tradition channels magick through its own
+# paradigm-appropriate methods: a Virtual Adept casts through code, never prayer;
+# a Celestial Chorister is the reverse. Authors gate choices with the `via`
+# shorthand — "Pray over the ward" [via prayer] — or pc.can_use("prayer").
+# Tradition keys match the ids/names in chargen.yaml (either form works).
+paradigm:
+  methods:
+    prayer: "Prayer & Faith"
+    ritual: "High Ritual Magick"
+    code: "Cybernetics & Code"
+    science: "Hypertech & Mad Science"
+    blood: "Blood & Sympathetic Magic"
+    herbalism: "Herbalism & Wortcunning"
+    meditation: "Meditation & Inner Focus"
+    martial_arts: "Martial Arts (Do)"
+    art: "Art & Performance"
+    dreaming: "Dreaming & Trance"
+    spirit_speech: "Spirit-Speech & Shamanism"
+    death_work: "Death-Work & Fate"
+  traditions:
+    akashic_brotherhood: [meditation, martial_arts]
+    celestial_chorus: [prayer, art]
+    cult_of_ecstasy: [art, dreaming]
+    dreamspeakers: [spirit_speech, dreaming]
+    euthanatos: [death_work, meditation]
+    order_of_hermes: [ritual]
+    sons_of_ether: [science]
+    verbena: [blood, herbalism, ritual]
+    virtual_adepts: [code, science]

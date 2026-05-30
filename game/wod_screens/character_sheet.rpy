@@ -156,6 +156,18 @@ screen character_sheet():
                                             $ pool_text = "{}/{}".format(pool.current(), pool.max)
                                             text "[pool_text]" size 12 color "#888888"
 
+                                # Focus — paradigm-appropriate casting methods for this Tradition
+                                $ paradigm = getattr(schema, "paradigm", None)
+                                if paradigm is not None:
+                                    $ focus_methods = sorted(paradigm.methods_for(pc.identity.get("tradition", "")))
+                                    if focus_methods:
+                                        null height 15
+                                        text "Focus" size 20 color "#b8860b"
+                                        null height 5
+                                        for method_id in focus_methods:
+                                            $ method_label = paradigm.display_name(method_id)
+                                            text "[method_label]" size 14 color "#e0e0e0"
+
     key "K_ESCAPE" action Hide("character_sheet")
     key "K_TAB" action Hide("character_sheet")
 

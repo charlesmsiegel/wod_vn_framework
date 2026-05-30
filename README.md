@@ -13,6 +13,7 @@ You write your story in Ren'Py. The framework handles character stats, resource 
 ## Features
 
 - **Deterministic stat gating** -- no dice rolls. Stats unlock menu choices and affect story outcomes.
+- **Paradigm/Focus gating** -- optional per-Tradition casting methods. A Virtual Adept can cast through code but not prayer; gate choices on paradigm as well as stats.
 - **Data-driven splat packs** -- Mage: The Ascension ships built-in; extensible to Vampire, Werewolf, and custom splats.
 - **Resource pools with linked constraints** -- Quintessence and Paradox share a 20-point Wheel; gaining one reduces the other.
 - **Character creation** -- three modes: Full M20 (priority-based allocation), Simplified (flat dot pools), and Template (pick a pre-built archetype).
@@ -115,7 +116,7 @@ Run the test suite:
 pytest
 ```
 
-The test suite covers the core engine (`test_engine.py`), stat gating (`test_gating.py`), resource pools (`test_resources.py`), character creation (`test_chargen.py`), bracket syntax compilation (`test_syntax.py`), YAML loading (`test_loader.py`), and end-to-end integration (`test_integration.py`).
+The test suite covers the core engine (`test_engine.py`), stat gating (`test_gating.py`), paradigm/Focus gating (`test_paradigm.py`), resource pools (`test_resources.py`), character creation (`test_chargen.py`), bracket syntax compilation (`test_syntax.py`), YAML loading (`test_loader.py`), and end-to-end integration (`test_integration.py`).
 
 ### Engine Architecture
 

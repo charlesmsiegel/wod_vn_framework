@@ -1,0 +1,46 @@
+schema: mage
+template: orphan_intuitive_empath
+character_type: pc
+identity:
+  name: ""
+  tradition: "Orphans"
+  essence: "Pattern"
+  resonance: "Static"
+  nature: "Caregiver"
+  demeanor: "Conformist"
+traits:
+  attributes:
+    Strength: 1
+    Dexterity: 2
+    Stamina: 2
+    Charisma: 3
+    Manipulation: 2
+    Appearance: 3
+    Perception: 3
+    Intelligence: 2
+    Wits: 2
+  abilities:
+    Empathy: 3
+    Awareness: 2
+    Alertness: 2
+    Subterfuge: 1
+    Meditation: 2
+    Medicine: 2
+    Investigation: 2
+  spheres:
+    Mind: 3
+    Life: 2
+    Entropy: 1
+  arete:
+    Arete: 3
+  resonance:
+    Static: 1
+  backgrounds:
+    Avatar: 2
+    Allies: 3
+    Contacts: 2
+resources:
+  quintessence: 4
+  paradox: 0
+  willpower: 5
+merits_flaws: []

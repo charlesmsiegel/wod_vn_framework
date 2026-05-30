@@ -1,0 +1,47 @@
+schema: mage
+template: orphan_self_taught
+character_type: pc
+identity:
+  name: ""
+  tradition: "Orphans"
+  essence: "Dynamic"
+  resonance: "Dynamic"
+  nature: "Survivor"
+  demeanor: "Loner"
+traits:
+  attributes:
+    Strength: 2
+    Dexterity: 3
+    Stamina: 3
+    Charisma: 2
+    Manipulation: 2
+    Appearance: 2
+    Perception: 3
+    Intelligence: 3
+    Wits: 3
+  abilities:
+    Athletics: 2
+    Alertness: 2
+    Awareness: 2
+    Streetwise: 2
+    Survival: 2
+    Science: 2
+    Occult: 2
+  spheres:
+    Forces: 3
+    Prime: 2
+    Correspondence: 1
+  arete:
+    Arete: 3
+  resonance:
+    Dynamic: 1
+  backgrounds:
+    Avatar: 3
+    Node: 2
+    Resources: 2
+resources:
+  quintessence: 5
+  paradox: 0
+  willpower: 5
+merits_flaws:
+  - { name: "Natural Channel", type: merit, value: 3 }

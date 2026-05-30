@@ -644,24 +644,24 @@ The preset dict is merged into the identity step data before the first screen ap
 The `chargen.yaml` file controls everything about character creation:
 
 - **`modes`** -- Define which steps each mode uses, point pools, starting Arete, freebie costs.
-- **`traditions`** -- List of Traditions with affinity Spheres, starting Arete overrides, and template file references.
+- **`traditions`** -- List of Traditions with affinity Spheres, starting Arete overrides, and template file references. The Mage pack ships the nine Traditions plus the Hollow Ones (a quasi-Tradition) and Orphans (unaffiliated Disparates). Orphans use `affinity_sphere: Any` because they choose their own.
 - **`archetypes`** -- Nature/Demeanor options.
 - **`essences`** -- Dynamic, Pattern, Primordial, Questing.
 - **`merits`** / **`flaws`** -- Available during the freebie step, with name, cost, and description.
 
-Example -- adding a new Tradition:
+Example -- adding a new Tradition (here, the Taftani artificers, which the Mage pack does not include by default):
 
 ```yaml
 traditions:
   # ... existing traditions ...
-  - id: hollow_ones
-    name: "Hollow Ones"
-    affinity_sphere: Entropy
-    free_sphere_dot: Entropy
+  - id: taftani
+    name: "Taftani"
+    affinity_sphere: Forces
+    free_sphere_dot: Forces
     templates:
-      - name: "Gothic Poet"
-        description: "Entropy and Mind — find truth in decay and disillusion"
-        file: templates/ho_gothic_poet.yaml
+      - name: "Wonder-Smith"
+        description: "Forces and Matter — bind the elements into living works of art"
+        file: templates/taft_wonder_smith.yaml
 ```
 
 ---

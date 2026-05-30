@@ -1,0 +1,47 @@
+schema: mage
+template: ho_gothic_poet
+character_type: pc
+identity:
+  name: ""
+  tradition: "Hollow Ones"
+  essence: "Pattern"
+  resonance: "Entropic"
+  nature: "Visionary"
+  demeanor: "Gallant"
+traits:
+  attributes:
+    Strength: 1
+    Dexterity: 2
+    Stamina: 2
+    Charisma: 3
+    Manipulation: 2
+    Appearance: 3
+    Perception: 3
+    Intelligence: 3
+    Wits: 2
+  abilities:
+    Expression: 3
+    Awareness: 2
+    Empathy: 2
+    Subterfuge: 2
+    Occult: 2
+    Enigmas: 2
+    Academics: 1
+  spheres:
+    Entropy: 3
+    Mind: 2
+    Spirit: 1
+  arete:
+    Arete: 3
+  resonance:
+    Entropic: 2
+  backgrounds:
+    Avatar: 3
+    Contacts: 2
+    Mentor: 2
+resources:
+  quintessence: 4
+  paradox: 0
+  willpower: 5
+merits_flaws:
+  - { name: "Nightmares", type: flaw, value: -1 }

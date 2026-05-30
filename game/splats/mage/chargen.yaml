@@ -117,6 +117,33 @@ traditions:
         description: "Correspondence and Forces — reshape the physical through the digital"
         file: templates/va_reality_hacker.yaml
 
+  # Quasi-Tradition (Hollow Ones) and unaffiliated mages (Orphans / Disparates).
+  - id: hollow_ones
+    name: "Hollow Ones"
+    affinity_sphere: Entropy
+    free_sphere_dot: Entropy
+    templates:
+      - name: "Gothic Poet"
+        description: "Entropy and Mind — find truth in decay and disillusion"
+        file: templates/ho_gothic_poet.yaml
+      - name: "Deathly Medium"
+        description: "Entropy and Spirit — commune with the dead and the dying world"
+        file: templates/ho_deathly_medium.yaml
+
+  - id: orphans
+    name: "Orphans"
+    # Orphans (the Disparates) Awaken without a Tradition and choose their own
+    # affinity Sphere, so none is fixed here; each template picks its own focus.
+    affinity_sphere: Any
+    free_sphere_dot: null
+    templates:
+      - name: "Self-Taught Sorcerer"
+        description: "Forces and Prime — raw magick reinvented alone, through trial and error"
+        file: templates/orphan_self_taught.yaml
+      - name: "Intuitive Empath"
+        description: "Mind and Life — an untrained psychic who heals and reads by instinct"
+        file: templates/orphan_intuitive_empath.yaml
+
 # Full M20 Nature/Demeanor Archetype set.
 # "Monster" is intentionally omitted — it reads as a Vampire (Beast) archetype
 # rather than a Mage one.

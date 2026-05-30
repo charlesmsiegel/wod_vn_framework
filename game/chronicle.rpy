@@ -163,9 +163,12 @@ label hv_travel:
 
     if not hv_studied:
         $ hv_studied = True
-        $ pc.advance("Cosmology")
-        $ wod_core.show_toast("Cosmology advanced to %d" % pc.get("Cosmology"))
-        "Piecing his logic together sharpens your own grasp of how Nodes and ley-lines truly knit. (Cosmology is now [pc.get('Cosmology')].)"
+        if pc.get("Cosmology") < pc.schema.get_range("Cosmology")[1]:
+            $ pc.advance("Cosmology")
+            $ wod_core.show_toast("Cosmology advanced to %d" % pc.get("Cosmology"))
+            "Piecing his logic together sharpens your own grasp of how Nodes and ley-lines truly knit. (Cosmology is now [pc.get('Cosmology')].)"
+        else:
+            "Piecing his logic together only confirms what you already grasp about how Nodes and ley-lines knit."
 
     "The pull from the stairwell is a cold hand on the back of your neck now. You go down."
 
@@ -250,8 +253,14 @@ label hv_stab_forces:
 label hv_stab_corr:
     # Hidden for Soraya; present for characters with Correspondence 2+.
     soraya "Don't fight it — move it. Send the overflow somewhere it can do no harm."
-    $ pc.spend("quintessence", 2)
-    "You fold the torn space against itself and route the surge out into the empty dark between places. The wound closes seamlessly."
+    $ ok = pc.spend("quintessence", 2)
+    if ok:
+        "You fold the torn space against itself and route the surge out into the empty dark between places. The wound closes seamlessly."
+    else:
+        $ pc.spend("willpower", 1)
+        $ pc.spend("health", 1)
+        $ hv_battered = True
+        "You haven't the Quintessence to move it cleanly, so you wrestle it shut by hand. It closes — and it costs."
     jump hv_after_breach
 
 
@@ -358,9 +367,15 @@ label hv_scene4:
 
         # Premium gate — hidden for the demo protagonist (Forces 3).
         "Overpower the wraith outright" if pc.gate("Forces", ">=", 4):
-            $ pc.spend("quintessence", 4)
-            "You hit the working like a hammer and it simply comes apart."
-            $ hv_mentor_fate = "released"
+            $ ok = pc.spend("quintessence", 4)
+            if ok:
+                "You hit the working like a hammer and it simply comes apart. He is released — there was no gentler way left to you."
+                $ hv_mentor_fate = "released"
+            else:
+                "You swing for it and close on empty — not the Quintessence to land the blow. The vigil fails on its own terms, and the Node tears wide before it dies."
+                $ pc.gain("paradox", 3)
+                $ hv_mentor_fate = "fled"
+                jump hv_scene5
 
         "You can't do this. Flee the threshold.":
             soraya "I'm sorry. I'm not strong enough for this."

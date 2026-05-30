@@ -29,6 +29,8 @@ class TestMageIntegration:
         assert len(abilities.trait_names) == 33
         spheres = schema.categories["spheres"]
         assert len(spheres.trait_names) == 9
+        resonance = schema.categories["resonance"]
+        assert resonance.trait_names == ["Dynamic", "Entropic", "Static"]
 
     def test_create_character_and_gate(self, tmp_path):
         char_yaml = tmp_path / "elena.yaml"
@@ -81,6 +83,38 @@ merits_flaws:
 
         assert wod_core.has("Avatar Companion") is True
         assert wod_core.has("Nonexistent") is False
+
+    def test_resonance_loads_and_gates(self, tmp_path):
+        char_yaml = tmp_path / "resonant.yaml"
+        char_yaml.write_text("""
+schema: mage
+template: default_mage
+character_type: pc
+identity:
+  name: "Resonant Mage"
+  resonance: "Dynamic"
+traits:
+  arete:
+    Arete: 3
+  spheres:
+    Forces: 2
+  resonance:
+    Dynamic: 3
+    Static: 1
+resources: {}
+merits_flaws: []
+""")
+        char = wod_core.load_character(str(char_yaml))
+        wod_core.set_active(char)
+
+        assert char.get("Dynamic") == 3
+        assert char.get("Static") == 1
+        assert char.get("Entropic") == 0  # defaulted
+
+        assert wod_core.gate("Dynamic", ">=", 2) is True
+        assert wod_core.gate("Dynamic", ">=", 4) is False
+        assert wod_core.gate("Static", "<=", 1) is True
+        assert wod_core.gate("Entropic", "==", 0) is True
 
     def test_resource_spending_and_linked_pools(self, tmp_path):
         char_yaml = tmp_path / "mage.yaml"

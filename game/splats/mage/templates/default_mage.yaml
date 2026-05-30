@@ -6,6 +6,7 @@ identity:
   name: ""
   tradition: ""
   essence: ""
+  resonance: ""
   nature: ""
   demeanor: ""
 
@@ -24,6 +25,7 @@ traits:
   spheres: {}
   arete:
     Arete: 1
+  resonance: {}
   backgrounds: {}
 
 resources:

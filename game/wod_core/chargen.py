@@ -133,6 +133,15 @@ class ChargenState:
     def get_essences(self) -> list[str]:
         return self.config.get("essences", [])
 
+    def get_resonance_types(self) -> list[str]:
+        """Resonance types (Dynamic/Entropic/Static), read from the schema.
+
+        The resonance category in schema.yaml is the single source of truth,
+        so authors who add or rename types there get them in chargen for free.
+        """
+        cat = self.schema.categories.get("resonance")
+        return list(cat.trait_names) if cat is not None else []
+
 
 class PointPool:
     """Tracks dot allocation within a budget."""
@@ -216,6 +225,17 @@ def _build_from_allocation(state: ChargenState) -> Character:
                 starting_arete = t["starting_arete"]
             break
     flat_traits["Arete"] = starting_arete
+
+    # Apply the starting Resonance dot from the identity pick. In M20 a
+    # beginning mage has a single dot of Resonance reflecting the flavor of
+    # her magick; the player picks the type (Dynamic/Entropic/Static) on the
+    # identity screen. Picking nothing simply leaves Resonance at 0.
+    resonance_type = identity.get("resonance", "")
+    if resonance_type and state.schema.has_trait(resonance_type):
+        starting_resonance = mode_config.get("starting_resonance", 1)
+        flat_traits[resonance_type] = max(
+            flat_traits.get(resonance_type, 0), starting_resonance
+        )
 
     # Apply sphere and background allocations
     sb_data = state.data.get("spheres_backgrounds", state.data.get("spheres", {}))

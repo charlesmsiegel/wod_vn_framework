@@ -89,6 +89,19 @@ trait_categories:
     default: 0
     range: [0, 5]
 
+  # Resonance — the flavor a mage's magick leaves on reality (M20).
+  # Every act of magick carries one of three Resonance types. Rated 0–5;
+  # a beginning mage typically has a single dot. Gate on these like any
+  # other trait, e.g. [Static >= 2] or pc.gate("Dynamic", ">=", 1).
+  resonance:
+    display_name: "Resonance"
+    traits:
+      - Dynamic
+      - Entropic
+      - Static
+    default: 0
+    range: [0, 5]
+
 trait_constraints:
   - type: max_linked
     target_category: spheres

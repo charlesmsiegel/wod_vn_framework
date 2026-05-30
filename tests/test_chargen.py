@@ -245,3 +245,67 @@ class TestBuildCharacter:
         assert char.identity["name"] == "Elena"
         assert char.get("Correspondence") == 3  # from template
         assert char.resources is not None
+
+
+class TestResonance:
+    """Test the Resonance system (Dynamic/Entropic/Static)."""
+
+    def test_resonance_types_from_schema(self, mage_splat):
+        state = ChargenState("mage", "full", mage_splat.schema, mage_splat.chargen_config, mage_splat)
+        assert state.get_resonance_types() == ["Dynamic", "Entropic", "Static"]
+
+    def test_full_build_grants_starting_resonance(self, mage_splat):
+        state = ChargenState("mage", "full", mage_splat.schema, mage_splat.chargen_config, mage_splat)
+        state.save_step("identity", {
+            "name": "Resonant Mage",
+            "tradition": "Verbena",
+            "resonance": "Dynamic",
+        })
+        state.save_step("attribute_allocate", {
+            "Strength": 2, "Dexterity": 2, "Stamina": 2,
+            "Charisma": 2, "Manipulation": 2, "Appearance": 2,
+            "Perception": 2, "Intelligence": 2, "Wits": 2,
+        })
+
+        char = build_character(state)
+
+        # Chosen type gets the starting dot; the others stay at 0.
+        assert char.get("Dynamic") == 1
+        assert char.get("Entropic") == 0
+        assert char.get("Static") == 0
+
+    def test_simplified_build_grants_starting_resonance(self, mage_splat):
+        state = ChargenState("mage", "simplified", mage_splat.schema, mage_splat.chargen_config, mage_splat)
+        state.save_step("identity", {
+            "name": "Quick Mage",
+            "tradition": "Euthanatos",
+            "resonance": "Entropic",
+        })
+
+        char = build_character(state)
+
+        assert char.get("Entropic") == 1
+        assert char.get("Dynamic") == 0
+
+    def test_build_without_resonance_pick_leaves_zero(self, mage_splat):
+        state = ChargenState("mage", "full", mage_splat.schema, mage_splat.chargen_config, mage_splat)
+        state.save_step("identity", {"name": "Plain Mage", "tradition": "Order of Hermes"})
+
+        char = build_character(state)
+
+        assert char.get("Dynamic") == 0
+        assert char.get("Entropic") == 0
+        assert char.get("Static") == 0
+
+    def test_template_build_carries_resonance(self, mage_splat):
+        state = ChargenState("mage", "template", mage_splat.schema, mage_splat.chargen_config, mage_splat)
+        state.save_step("identity", {"name": "Net Runner"})
+        state.save_step("template_pick", {
+            "tradition": "virtual_adepts",
+            "template_file": "templates/va_code_witch.yaml",
+        })
+
+        char = build_character(state)
+
+        # va_code_witch.yaml defines Dynamic: 2.
+        assert char.get("Dynamic") == 2

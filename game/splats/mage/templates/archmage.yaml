@@ -5,3 +5,5 @@ overrides:
       range: [0, 10]
     arete:
       range: [1, 10]
+    resonance:
+      range: [0, 10]

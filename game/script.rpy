@@ -52,6 +52,10 @@ label analyze_ward:
 
         if pc.gate("Forces", ">=", 3):
             "Your understanding of Forces lets you unravel the energy matrix cleanly."
+
+            if pc.gate("Dynamic", ">=", 2):
+                "Your own Dynamic Resonance — restless, hungry for change — floods the breach. The ward's rigid Static Pattern cannot hold against so much momentum, and it sloughs apart faster than it has any right to."
+
             "But the Consensus pushes back. The ward was {i}expected{/i} to be there."
             $ pc.gain("paradox", 2)
             "You feel Paradox settle into your Pattern like static on a screen."
@@ -138,11 +142,13 @@ label epilogue:
     "  - Linked pool constraints (Paradox gain)"
     "  - Outcome branching based on stat levels"
     "  - Mid-story stat advancement (Awareness)"
+    "  - Resonance-flavored branching (Dynamic vs. Static)"
 
     if pc is not None:
         "Final character state:"
         "  Quintessence: [pc.resources.current('quintessence')]"
         "  Paradox: [pc.resources.current('paradox')]"
         "  Awareness: [pc.get('Awareness')]"
+        "  Dynamic Resonance: [pc.get('Dynamic')]"
 
     return

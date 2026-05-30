@@ -115,24 +115,34 @@ traditions:
         description: "Correspondence and Forces — reshape the physical through the digital"
         file: templates/va_reality_hacker.yaml
 
-# Curated subset of M20 Archetypes
+# Full M20 Nature/Demeanor Archetype set.
+# "Monster" is intentionally omitted — it reads as a Vampire (Beast) archetype
+# rather than a Mage one.
 archetypes:
   - Architect
+  - Autocrat
+  - Avant-Garde
   - Bon Vivant
   - Bravo
   - Caregiver
   - Celebrant
+  - Child
   - Competitor
   - Conformist
   - Conniver
   - Curmudgeon
   - Deviant
   - Director
+  - Enigma
+  - Eye of the Storm
+  - Fanatic
   - Gallant
+  - Guru
   - Idealist
   - Judge
   - Loner
   - Martyr
+  - Masochist
   - Pedagogue
   - Penitent
   - Perfectionist

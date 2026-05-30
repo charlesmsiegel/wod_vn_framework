@@ -64,3 +64,21 @@ def menu_has_available_choice(items) -> bool:
         if locked_hint(value):
             return True
     return False
+
+
+def menu_has_selectable_choice(items) -> bool:
+    """Return whether a menu has at least one *selectable* (clickable) choice.
+
+    Like :func:`menu_has_available_choice`, except a ``(locked="...")`` choice
+    does **not** count -- it is shown greyed-out and cannot be picked. The menu
+    wrapper uses this to spot an *all-locked* menu (one displayed only because of
+    its locked choices, with nothing the player can actually click) so it can add
+    a "Continue" escape choice, rather than stranding the player on a screen
+    whose every row is insensitive.
+    """
+    for _label, value in items:
+        if value is None:
+            continue
+        if getattr(value, "sensitive", True):
+            return True
+    return False

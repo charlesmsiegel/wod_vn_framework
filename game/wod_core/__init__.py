@@ -6,7 +6,12 @@ __version__ = "0.1.0"
 
 from wod_core import migrations
 from wod_core.gating import gate, has, can_use, set_active, get_active
-from wod_core.menus import locked_hint, classify_choice, menu_has_available_choice
+from wod_core.menus import (
+    locked_hint,
+    classify_choice,
+    menu_has_available_choice,
+    menu_has_selectable_choice,
+)
 from wod_core.loader import SplatLoader
 from wod_core.migrations import (
     MigrationError,

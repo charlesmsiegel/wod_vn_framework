@@ -1,7 +1,12 @@
 # tests/test_menus.py
 """Tests for choice-screen / menu integration helpers."""
 
-from wod_core.menus import locked_hint, classify_choice, menu_has_available_choice
+from wod_core.menus import (
+    locked_hint,
+    classify_choice,
+    menu_has_available_choice,
+    menu_has_selectable_choice,
+)
 
 
 class FakeChoice:
@@ -86,3 +91,44 @@ class TestMenuHasAvailableChoice:
             ("Open", FakeChoice(sensitive=True)),
         ]
         assert menu_has_available_choice(items) is True
+
+
+class TestMenuHasSelectableChoice:
+    """Selectable == clickable. Unlike menu_has_available_choice, a
+    ``(locked="...")`` choice does NOT count -- it is shown but un-pickable."""
+
+    def test_empty(self):
+        assert menu_has_selectable_choice([]) is False
+
+    def test_only_caption(self):
+        assert menu_has_selectable_choice([("Which way?", None)]) is False
+
+    def test_enabled_choice(self):
+        assert menu_has_selectable_choice([("Go", FakeChoice(sensitive=True))]) is True
+
+    def test_all_disabled(self):
+        items = [
+            ("A", FakeChoice(sensitive=False)),
+            ("B", FakeChoice(sensitive=False)),
+        ]
+        assert menu_has_selectable_choice(items) is False
+
+    def test_all_locked_is_not_selectable(self):
+        # The all-locked case: the menu is worth displaying (it has locked
+        # teasers) yet nothing is clickable, so the wrapper must add an escape.
+        items = [("A", FakeChoice(kwargs={"locked": "nope"}, sensitive=False))]
+        assert menu_has_available_choice(items) is True
+        assert menu_has_selectable_choice(items) is False
+
+    def test_mixed_has_selectable(self):
+        items = [
+            ("Caption", None),
+            ("Locked", FakeChoice(kwargs={"locked": "x"}, sensitive=False)),
+            ("Open", FakeChoice(sensitive=True)),
+        ]
+        assert menu_has_selectable_choice(items) is True
+
+    def test_missing_sensitive_defaults_selectable(self):
+        # A real choice with no explicit `sensitive` defaults to selectable,
+        # matching menu_has_available_choice's getattr(..., True).
+        assert menu_has_selectable_choice([("Go", FakeChoice())]) is True

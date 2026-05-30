@@ -280,15 +280,16 @@ class TestParadigmSerialization:
 
 
 class TestRealMageParadigm:
-    """The shipped Mage schema defines a paradigm for all nine Traditions."""
+    """The shipped Mage schema defines a paradigm for every Tradition (these tests pin the nine core)."""
 
     def setup_method(self):
         wod_core.init(GAME_DIR)
         wod_core.load_splat("mage")
 
-    # The nine core Traditions each channel a fixed paradigm. Hollow Ones and
-    # Orphans are deliberately unaffiliated — they pick their own focus — so
-    # they carry no fixed paradigm entry and are excluded here.
+    # The nine core Traditions each channel a canonical, fixed paradigm, and
+    # this test pins exactly those nine. Hollow Ones and Orphans also carry
+    # paradigm methods, but theirs are eclectic/improvised rather than
+    # canonical, so they sit outside this core-roster assertion.
     _CORE_TRADITIONS = frozenset({
         "akashic_brotherhood", "celestial_chorus", "cult_of_ecstasy",
         "dreamspeakers", "euthanatos", "order_of_hermes",

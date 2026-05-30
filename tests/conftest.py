@@ -79,6 +79,35 @@ def mage_schema_data():
 
 
 @pytest.fixture
+def boolean_schema_data():
+    """Schema with a dot-rated category plus a boolean (Gifts) category.
+
+    The boolean category omits range/default on purpose so tests cover the
+    [0, 1] default applied to boolean categories.
+    """
+    return {
+        "trait_categories": {
+            "attributes": {
+                "display_name": "Attributes",
+                "traits": ["Strength", "Dexterity"],
+                "default": 1,
+                "range": [1, 5],
+            },
+            "gifts": {
+                "display_name": "Gifts",
+                "type": "boolean",
+                "traits": [
+                    "Sense Wyrm",
+                    "Mother's Touch",
+                    "Razor Claws",
+                    "Falling Touch",
+                ],
+            },
+        }
+    }
+
+
+@pytest.fixture
 def mage_resource_data():
     """Minimal Mage resource config for testing."""
     return {

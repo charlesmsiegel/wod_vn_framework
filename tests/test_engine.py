@@ -182,6 +182,109 @@ class TestTraitConstraints:
         assert char.get("Forces") == 5
 
 
+class TestBooleanTraits:
+    """Boolean (on/off) trait type — Gifts, Edges, binary Discipline powers."""
+
+    def test_default_category_type_is_dots(self, mage_schema_data):
+        schema = Schema(mage_schema_data)
+        assert schema.categories["attributes"].type == "dots"
+        assert schema.categories["spheres"].type == "dots"
+
+    def test_boolean_category_type_parsed(self, boolean_schema_data):
+        schema = Schema(boolean_schema_data)
+        assert schema.categories["gifts"].type == "boolean"
+
+    def test_boolean_category_default_range_is_0_1(self, boolean_schema_data):
+        schema = Schema(boolean_schema_data)
+        gifts = schema.categories["gifts"]
+        assert gifts.range == (0, 1)
+        assert gifts.default == 0
+
+    def test_is_boolean_trait(self, boolean_schema_data):
+        schema = Schema(boolean_schema_data)
+        assert schema.is_boolean_trait("Sense Wyrm") is True
+        assert schema.is_boolean_trait("Strength") is False
+        assert schema.is_boolean_trait("Nonexistent") is False
+
+    def test_get_category_type(self, boolean_schema_data):
+        schema = Schema(boolean_schema_data)
+        assert schema.get_category_type("Sense Wyrm") == "boolean"
+        assert schema.get_category_type("Strength") == "dots"
+
+    def test_get_boolean_trait_names(self, boolean_schema_data):
+        schema = Schema(boolean_schema_data)
+        assert set(schema.get_boolean_trait_names()) == {
+            "Sense Wyrm", "Mother's Touch", "Razor Claws", "Falling Touch",
+        }
+
+    def test_boolean_trait_rejects_value_above_one(self, boolean_schema_data):
+        schema = Schema(boolean_schema_data)
+        char = Character(schema)
+        with pytest.raises(ValueError, match="must be between"):
+            char.set("Sense Wyrm", 2)
+
+    def test_has_true_for_owned_boolean(self, boolean_schema_data):
+        schema = Schema(boolean_schema_data)
+        char = Character(schema, traits={"Sense Wyrm": 1})
+        assert char.has("Sense Wyrm") is True
+
+    def test_has_false_for_unowned_boolean(self, boolean_schema_data):
+        schema = Schema(boolean_schema_data)
+        char = Character(schema)
+        assert char.has("Sense Wyrm") is False
+
+    def test_has_false_for_dot_trait(self, boolean_schema_data):
+        # Dot-rated traits never satisfy has(); use gate() for those.
+        schema = Schema(boolean_schema_data)
+        char = Character(schema, traits={"Strength": 5})
+        assert char.has("Strength") is False
+
+    def test_has_still_checks_merits(self, boolean_schema_data):
+        schema = Schema(boolean_schema_data)
+        char = Character(
+            schema, merits_flaws=[{"name": "Brave", "type": "merit", "value": 1}]
+        )
+        assert char.has("Brave") is True
+        assert char.has("Sense Wyrm") is False
+
+    def test_gate_boolean_trait(self, boolean_schema_data):
+        schema = Schema(boolean_schema_data)
+        char = Character(schema, traits={"Sense Wyrm": 1})
+        assert char.gate("Sense Wyrm", ">=", 1) is True
+        assert char.gate("Sense Wyrm", "==", 1) is True
+        assert char.gate("Razor Claws", ">=", 1) is False
+        assert char.gate("Razor Claws", "==", 0) is True
+
+    def test_boolean_type_survives_pickle(self, boolean_schema_data):
+        schema = Schema(boolean_schema_data)
+        char = Character(schema, traits={"Sense Wyrm": 1})
+        restored = pickle.loads(pickle.dumps(char))
+        assert restored.schema.is_boolean_trait("Sense Wyrm") is True
+        assert restored.schema.categories["gifts"].range == (0, 1)
+        assert restored.has("Sense Wyrm") is True
+        assert restored.gate("Sense Wyrm", ">=", 1) is True
+
+    def test_has_tracks_temporary_modifier_like_gate(self, boolean_schema_data):
+        # has() reads the effective value, so a temporary grant/suppression
+        # keeps has() and gate() in agreement.
+        schema = Schema(boolean_schema_data)
+        char = Character(schema)
+        assert char.has("Sense Wyrm") is False
+
+        char.apply_modifier("Sense Wyrm", 1, source="rite")
+        assert char.has("Sense Wyrm") is True
+        assert char.gate("Sense Wyrm", ">=", 1) is True
+
+        char.remove_modifier("rite")
+        assert char.has("Sense Wyrm") is False
+
+        # Suppression: a debuff on an owned Gift hides it from has().
+        char.set("Razor Claws", 1)
+        char.apply_modifier("Razor Claws", -1, source="curse")
+        assert char.has("Razor Claws") is False
+        assert char.gate("Razor Claws", ">=", 1) is False
+
+
 class TestCharacterGate:
     """Test Character.gate() dispatching to traits and resources."""
 

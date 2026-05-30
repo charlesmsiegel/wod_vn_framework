@@ -1,0 +1,51 @@
+name: Ren'Py lint
+
+# Manual-only for now: the SDK download + headless invocation hasn't been
+# verified in CI yet. Run it from the Actions tab ("Run workflow"). Once it's
+# confirmed to run clean, add `pull_request:` / `push:` triggers here (and copy
+# this job back into ci.yml if you want it to gate merges).
+on:
+  workflow_dispatch:
+    inputs:
+      renpy_version:
+        description: "Ren'Py SDK version to lint with"
+        required: false
+        default: "8.3.7"
+
+jobs:
+  lint:
+    name: renpy lint
+    runs-on: ubuntu-latest
+    env:
+      RENPY_VERSION: ${{ inputs.renpy_version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Ren'Py SDK
+        id: cache-renpy
+        uses: actions/cache@v4
+        with:
+          path: renpy-sdk
+          key: renpy-sdk-${{ env.RENPY_VERSION }}
+
+      - name: Download Ren'Py SDK
+        if: steps.cache-renpy.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          url="https://www.renpy.org/dl/${RENPY_VERSION}/renpy-${RENPY_VERSION}-sdk.tar.bz2"
+          echo "Downloading ${url}"
+          curl -fsSL "${url}" -o renpy-sdk.tar.bz2
+          mkdir -p renpy-sdk
+          tar -xjf renpy-sdk.tar.bz2 -C renpy-sdk --strip-components=1
+
+      - name: Install headless display
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
+      - name: Run Ren'Py lint
+        # The project base directory is the repo root (it contains game/).
+        # --error-code makes `lint` exit non-zero when it reports a script error,
+        # so this job actually fails the run instead of finishing green.
+        run: |
+          set -euo pipefail
+          chmod +x renpy-sdk/renpy.sh
+          xvfb-run -a renpy-sdk/renpy.sh "${GITHUB_WORKSPACE}" lint --error-code

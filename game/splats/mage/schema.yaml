@@ -132,6 +132,7 @@ paradigm:
     dreaming: "Dreaming & Trance"
     spirit_speech: "Spirit-Speech & Shamanism"
     death_work: "Death-Work & Fate"
+    intuition: "Intuition & Improvisation"
   traditions:
     akashic_brotherhood: [meditation, martial_arts]
     celestial_chorus: [prayer, art]
@@ -142,3 +143,10 @@ paradigm:
     sons_of_ether: [science]
     verbena: [blood, herbalism, ritual]
     virtual_adepts: [code, science]
+    # Quasi-Tradition and the unaffiliated — both Awaken outside the nine core
+    # Traditions but still channel a focus. Hollow Ones are gothic eclectics
+    # (art, and the death/spirit work of their poets and mediums); Orphans have
+    # no Tradition's formal paradigm, so they improvise by instinct — the
+    # catch-all `intuition` method.
+    hollow_ones: [art, death_work, spirit_speech]
+    orphans: [intuition]

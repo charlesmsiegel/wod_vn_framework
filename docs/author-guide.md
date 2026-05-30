@@ -457,7 +457,7 @@ WoD: compiled bracket shorthand in script.rpy
 Notes and limits:
 
 - **It edits your `.rpy` in place.** The shorthand is replaced by the equivalent `if` expression, exactly as the CLI does. Keep your project under version control so you can review the diff. (Add the brackets back any time you prefer the shorthand; they'll recompile on the next launch.)
-- **Developer mode only.** Distributed builds ship precompiled, so the pass does nothing there.
+- **Packaged builds are safe.** Distributed builds ship precompiled `.rpyc` with no shorthand to transform, and a read-only tree is handled gracefully. The pass also best-effort skips when Ren'Py has resolved developer mode off — but because it runs in `python early`, an init-time `config.developer = False` (in `options.rpy`) is evaluated *too late* to gate it. To force the pass off, use `WOD_AUTO_PREPROCESS=0` (see Opt out, below).
 - **File ordering.** Files that sort *before* `00_wod_preprocess.rpy` (e.g. a name beginning with `000`) are parsed before the early block runs and won't be auto-compiled — keep the framework's `00_` prefix ahead of your own files, or compile those with the CLI.
 - **Opt out** with the `WOD_AUTO_PREPROCESS` environment variable — set it to `0` when launching. It's read before any script runs, so it always takes effect regardless of file order, and it's the right switch for CI, `renpy lint`, or a CLI-only workflow:
   ```bash

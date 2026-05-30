@@ -106,12 +106,18 @@ def run_init_preprocess(verbose: bool = True) -> list[str]:
 
     The pass is a no-op when any of these hold:
 
-    * Ren'Py is not in developer mode. Distributed builds ship precompiled
-      ``.rpyc`` and have no shorthand to transform (and the tree may be
-      read-only).
+    * Ren'Py has *already resolved* developer mode to off. This is a best-effort
+      one-directional safety only: the function runs in ``python early``, where
+      ``config.developer`` may still be the unresolved default ``"auto"`` and an
+      init-time ``config.developer = False`` (in ``options.rpy``) is evaluated
+      too late to be seen here. It is **not** the authoritative switch — use the
+      env var below. (Packaged builds are safe regardless: they ship precompiled
+      ``.rpyc`` with no shorthand to transform, and a read-only tree degrades
+      gracefully.)
     * The ``WOD_AUTO_PREPROCESS`` environment variable is set to a falsey value.
-      This is the ordering-independent opt-out (read before any script runs),
-      and the right one for CI / ``renpy lint`` / CLI-only workflows.
+      This is the authoritative, ordering-independent opt-out (read before any
+      script runs), and the right one for CI / ``renpy lint`` / CLI-only
+      workflows or for an author who has turned developer mode off.
     * ``wod_core.config.auto_preprocess`` is disabled. Because this function
       runs in ``python early``, that flag only takes effect when set early
       enough — i.e. from a ``python early`` block in a file that sorts before
@@ -121,11 +127,14 @@ def run_init_preprocess(verbose: bool = True) -> list[str]:
     """
     import renpy  # only importable from inside Ren'Py
 
-    # Only rewrite source while developing; shipped builds are precompiled.
+    # Best-effort safety for packaged games: skip when Ren'Py has already
+    # resolved developer mode to off. NOTE: in `python early` config.developer
+    # may still be the default "auto" (truthy), and an init-time
+    # `config.developer = False` runs later — so this is not the authoritative
+    # switch. The env var below is; it's read before any script runs.
     if not renpy.config.developer:
         return []
 
-    # Env var wins and is honored regardless of load order.
     if _disabled_by_env():
         return []
 

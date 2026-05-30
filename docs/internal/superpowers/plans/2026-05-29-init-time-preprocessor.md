@@ -66,8 +66,13 @@ are no-ops for it.
 
 `run_init_preprocess()` is a no-op when any of these hold:
 
-- `renpy.config.developer` is false. Distributed builds ship precompiled `.rpyc`,
-  have no shorthand to compile, and may sit on a read-only tree.
+- Ren'Py has *already resolved* `config.developer` to false. **Caveat (Codex
+  #43):** this runs in `python early`, where `config.developer` may still be the
+  unresolved default `"auto"`, and an init-time `config.developer = False` is
+  evaluated too late to be seen here. So it's a best-effort one-directional
+  safety, **not** the authoritative switch — the env var is. Packaged builds are
+  safe regardless: precompiled `.rpyc` (no shorthand), and a read-only tree
+  degrades gracefully via the catch-all in `run_init_preprocess()`.
 - `WOD_AUTO_PREPROCESS` is set to a falsey value. This is the **ordering-independent
   opt-out**: it's an environment variable, read before any script runs, so it
   always takes effect — and it's the right switch for CI / `renpy lint` / CLI-only

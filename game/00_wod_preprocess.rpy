@@ -20,8 +20,12 @@
 ##
 ## SCOPE & OPT-OUT
 ## ---------------
-## * Runs in developer mode only. Distributed builds ship precompiled .rpyc and
-##   have nothing to transform.
+## * Packaged builds are safe: they ship precompiled .rpyc with no shorthand to
+##   transform, and a read-only tree degrades gracefully. The pass also makes a
+##   best-effort skip when Ren'Py has resolved developer mode off — but because
+##   this is `python early`, an init-time `config.developer = False` (in
+##   options.rpy) is evaluated too late to gate it. To force the pass off, use
+##   the WOD_AUTO_PREPROCESS env var below.
 ## * Author files that sort before this one (e.g. names beginning with "000")
 ##   are parsed before the early block runs — keep the framework's "00_" prefix
 ##   ahead of your own files, or compile those with the CLI.

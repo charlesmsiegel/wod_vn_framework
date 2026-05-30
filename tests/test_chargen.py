@@ -1,7 +1,12 @@
 # tests/test_chargen.py
 import os
 import pytest
-from wod_core.chargen import ChargenState, PointPool, build_character
+from wod_core.chargen import (
+    ChargenState,
+    PointPool,
+    build_character,
+    validate_priorities,
+)
 from wod_core.loader import SplatLoader
 
 GAME_DIR = os.path.join(os.path.dirname(__file__), "..", "game")
@@ -111,6 +116,77 @@ class TestPointPool:
         pool.reset()
         assert pool.remaining == 7
         assert pool.get_all() == {}
+
+
+class TestPriorityValidation:
+    """Priority steps must assign three distinct ranks (issue #14)."""
+
+    def test_valid_distinct_attribute_priorities(self, mage_splat):
+        state = ChargenState("mage", "full", mage_splat.schema, mage_splat.chargen_config, mage_splat)
+        ok, msg = state.validate_priority_step(
+            "attribute_priority", {"physical": 7, "social": 5, "mental": 3}
+        )
+        assert ok is True
+        assert msg == ""
+
+    def test_duplicate_primary_rejected(self, mage_splat):
+        # The exact bug from issue #14: Primary (7) assigned to two groups.
+        state = ChargenState("mage", "full", mage_splat.schema, mage_splat.chargen_config, mage_splat)
+        ok, msg = state.validate_priority_step(
+            "attribute_priority", {"physical": 7, "social": 7, "mental": 3}
+        )
+        assert ok is False
+        assert "same rank" in msg
+
+    def test_incomplete_priority_rejected(self, mage_splat):
+        # One group left unassigned (0 dots).
+        state = ChargenState("mage", "full", mage_splat.schema, mage_splat.chargen_config, mage_splat)
+        ok, msg = state.validate_priority_step(
+            "attribute_priority", {"physical": 7, "social": 5, "mental": 0}
+        )
+        assert ok is False
+        assert msg
+
+    def test_invalid_rank_values_rejected(self, mage_splat):
+        # Distinct, but not the configured 7/5/3 pool.
+        state = ChargenState("mage", "full", mage_splat.schema, mage_splat.chargen_config, mage_splat)
+        ok, msg = state.validate_priority_step(
+            "attribute_priority", {"physical": 7, "social": 5, "mental": 4}
+        )
+        assert ok is False
+        assert msg
+
+    def test_valid_distinct_ability_priorities(self, mage_splat):
+        state = ChargenState("mage", "full", mage_splat.schema, mage_splat.chargen_config, mage_splat)
+        ok, msg = state.validate_priority_step(
+            "ability_priority", {"talents": 13, "skills": 9, "knowledges": 5}
+        )
+        assert ok is True
+
+    def test_duplicate_ability_priority_rejected(self, mage_splat):
+        state = ChargenState("mage", "full", mage_splat.schema, mage_splat.chargen_config, mage_splat)
+        ok, msg = state.validate_priority_step(
+            "ability_priority", {"talents": 13, "skills": 13, "knowledges": 5}
+        )
+        assert ok is False
+        assert "same rank" in msg
+
+    def test_non_priority_step_passes(self, mage_splat):
+        # Steps without a configured rank pool validate trivially.
+        state = ChargenState("mage", "full", mage_splat.schema, mage_splat.chargen_config, mage_splat)
+        ok, msg = state.validate_priority_step("identity", {"name": "Test"})
+        assert ok is True
+        assert msg == ""
+
+    def test_validate_priorities_helper_distinct(self):
+        ok, msg = validate_priorities({"a": 7, "b": 5, "c": 3}, [7, 5, 3])
+        assert ok is True
+        assert msg == ""
+
+    def test_validate_priorities_helper_duplicate(self):
+        ok, msg = validate_priorities({"a": 7, "b": 7, "c": 3}, [7, 5, 3])
+        assert ok is False
+        assert "different group" in msg
 
 
 class TestBuildCharacter:

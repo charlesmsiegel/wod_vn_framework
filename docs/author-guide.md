@@ -403,6 +403,8 @@ The Mage splat ships with this paradigm:
 | Sons of Ether | science |
 | Verbena | blood, herbalism, ritual |
 | Virtual Adepts | code, science |
+| Hollow Ones | art, death_work, spirit_speech |
+| Orphans | intuition |
 
 ### Outcome Branching
 

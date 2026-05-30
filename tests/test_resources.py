@@ -1,6 +1,15 @@
 # tests/test_resources.py
 import pytest
-from wod_core.resources import ResourcePool, ResourceManager
+from wod_core.resources import (
+    ResourcePool,
+    ResourceManager,
+    penalty_severity,
+    SEVERITY_NONE,
+    SEVERITY_MINOR,
+    SEVERITY_MODERATE,
+    SEVERITY_SEVERE,
+    SEVERITY_INCAPACITATED,
+)
 
 
 class TestResourcePool:
@@ -121,3 +130,57 @@ class TestLinkedResources:
         original_wp = mgr.current("willpower")
         mgr.gain("quintessence", 20)
         assert mgr.current("willpower") == original_wp
+
+
+class TestHealthSeverity:
+    """Wound-penalty -> severity tier mapping that colors the health track."""
+
+    @pytest.mark.parametrize(
+        "penalty,expected",
+        [
+            (0, SEVERITY_NONE),
+            (-1, SEVERITY_MINOR),
+            (-2, SEVERITY_MODERATE),
+            (-5, SEVERITY_SEVERE),
+            (None, SEVERITY_INCAPACITATED),
+        ],
+    )
+    def test_standard_wod_penalties(self, penalty, expected):
+        assert penalty_severity(penalty) == expected
+
+    def test_positive_penalty_is_unpenalized(self):
+        assert penalty_severity(3) == SEVERITY_NONE
+
+    def test_penalties_below_moderate_are_severe(self):
+        assert penalty_severity(-3) == SEVERITY_SEVERE
+        assert penalty_severity(-4) == SEVERITY_SEVERE
+        assert penalty_severity(-10) == SEVERITY_SEVERE
+
+    def test_severity_at_maps_each_standard_level(self):
+        levels = [
+            {"name": "Bruised", "penalty": 0},
+            {"name": "Hurt", "penalty": -1},
+            {"name": "Injured", "penalty": -1},
+            {"name": "Wounded", "penalty": -2},
+            {"name": "Mauled", "penalty": -2},
+            {"name": "Crippled", "penalty": -5},
+            {"name": "Incapacitated", "penalty": None},
+        ]
+        pool = ResourcePool(
+            "health",
+            {"range": [0, 7], "default_current": "max", "track_type": "levels", "levels": levels},
+        )
+        assert [pool.severity_at(i) for i in range(7)] == [
+            SEVERITY_NONE,
+            SEVERITY_MINOR,
+            SEVERITY_MINOR,
+            SEVERITY_MODERATE,
+            SEVERITY_MODERATE,
+            SEVERITY_SEVERE,
+            SEVERITY_INCAPACITATED,
+        ]
+
+    def test_severity_at_out_of_range_falls_back_to_severe(self):
+        pool = ResourcePool("health", {"range": [0, 7], "default_current": "max"})
+        assert pool.severity_at(0) == SEVERITY_SEVERE  # no levels defined
+        assert pool.severity_at(99) == SEVERITY_SEVERE

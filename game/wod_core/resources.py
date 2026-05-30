@@ -2,6 +2,34 @@
 
 from __future__ import annotations
 
+# Wound-penalty severity tiers for "levels" tracks such as Health. The UI maps
+# each tier to a color in the gothic theme so a damaged track reads at a glance:
+#   none -> green, minor -> yellow, moderate -> orange,
+#   severe -> red, incapacitated -> black.
+SEVERITY_NONE = "none"
+SEVERITY_MINOR = "minor"
+SEVERITY_MODERATE = "moderate"
+SEVERITY_SEVERE = "severe"
+SEVERITY_INCAPACITATED = "incapacitated"
+
+
+def penalty_severity(penalty) -> str:
+    """Classify a health-level wound penalty into a severity tier.
+
+    ``None`` marks an Incapacitated level (no further action possible). A
+    penalty of 0 is unpenalized; otherwise a deeper penalty yields a more
+    severe tier. Standard World of Darkness tracks use 0 / -1 / -2 / -5.
+    """
+    if penalty is None:
+        return SEVERITY_INCAPACITATED
+    if penalty >= 0:
+        return SEVERITY_NONE
+    if penalty >= -1:
+        return SEVERITY_MINOR
+    if penalty >= -2:
+        return SEVERITY_MODERATE
+    return SEVERITY_SEVERE
+
 
 class ResourcePool:
     """A single trackable resource (Quintessence, Health, etc.)."""
@@ -45,6 +73,18 @@ class ResourcePool:
 
     def at_min(self) -> bool:
         return self.current_value <= self.range[0]
+
+    def severity_at(self, index: int) -> str:
+        """Severity tier of the track level at ``index`` (0-based, least to most severe).
+
+        Used by the HUD to color damaged health boxes. Levels are ordered from
+        least to most severe, matching how a health track fills top-down. Falls
+        back to ``severe`` when ``index`` has no defined level, so unexpected
+        damage still reads as harmful rather than unmarked.
+        """
+        if 0 <= index < len(self.levels):
+            return penalty_severity(self.levels[index].get("penalty"))
+        return SEVERITY_SEVERE
 
 
 class ResourceLink:

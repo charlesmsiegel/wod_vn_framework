@@ -5,6 +5,7 @@ identity:
   name: ""
   tradition: "Celestial Chorus"
   essence: "Primordial"
+  resonance: "Static"
   nature: "Celebrant"
   demeanor: "Idealist"
 traits:
@@ -32,6 +33,8 @@ traits:
     Spirit: 1
   arete:
     Arete: 3
+  resonance:
+    Static: 1
   backgrounds:
     Avatar: 2
     Allies: 2

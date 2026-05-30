@@ -5,6 +5,7 @@ identity:
   name: ""
   tradition: "Sons of Ether"
   essence: "Questing"
+  resonance: "Dynamic"
   nature: "Visionary"
   demeanor: "Deviant"
 traits:
@@ -31,6 +32,8 @@ traits:
     Prime: 1
   arete:
     Arete: 3
+  resonance:
+    Dynamic: 1
   backgrounds:
     Avatar: 2
     Resources: 2

@@ -5,6 +5,7 @@ identity:
   name: ""
   tradition: "Akashic Brotherhood"
   essence: "Pattern"
+  resonance: "Static"
   nature: "Perfectionist"
   demeanor: "Traditionalist"
 traits:
@@ -32,6 +33,8 @@ traits:
     Forces: 1
   arete:
     Arete: 3
+  resonance:
+    Static: 1
   backgrounds:
     Avatar: 2
     Mentor: 2

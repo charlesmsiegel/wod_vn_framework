@@ -5,6 +5,7 @@ identity:
   name: ""
   tradition: "Akashic Brotherhood"
   essence: "Questing"
+  resonance: "Dynamic"
   nature: "Visionary"
   demeanor: "Caregiver"
 traits:
@@ -32,6 +33,8 @@ traits:
     Correspondence: 1
   arete:
     Arete: 3
+  resonance:
+    Dynamic: 1
   backgrounds:
     Avatar: 3
     Dream: 2

@@ -5,6 +5,7 @@ identity:
   name: ""
   tradition: "Dreamspeakers"
   essence: "Primordial"
+  resonance: "Dynamic"
   nature: "Visionary"
   demeanor: "Loner"
 traits:
@@ -32,6 +33,8 @@ traits:
     Prime: 1
   arete:
     Arete: 3
+  resonance:
+    Dynamic: 1
   backgrounds:
     Avatar: 2
     Familiar: 2

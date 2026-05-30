@@ -5,6 +5,7 @@ identity:
   name: ""
   tradition: "Cult of Ecstasy"
   essence: "Dynamic"
+  resonance: "Dynamic"
   nature: "Thrill-Seeker"
   demeanor: "Bon Vivant"
 traits:
@@ -33,6 +34,8 @@ traits:
     Mind: 1
   arete:
     Arete: 3
+  resonance:
+    Dynamic: 1
   backgrounds:
     Avatar: 2
     Dream: 2

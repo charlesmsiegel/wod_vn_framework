@@ -1012,6 +1012,16 @@ do not bump the version, no migration runs** -- this is deliberate, so that
 author-level overrides and template-extended characters (which share the base
 version) keep their custom schemas.
 
+> **Template-extended characters and version bumps.** A character loaded via
+> `load_character_from_template` with overrides (e.g. an archmage with a wider
+> Sphere range) carries its own extended schema. As long as you do not bump the
+> base version, it keeps that schema untouched. When you *do* bump the version,
+> it is reconciled onto the canonical schema like any other save -- override-only
+> traits are dropped and wider ranges are clamped to the canonical range (the
+> changes are reported via the load toast and log). If you need such a character
+> to retain its extensions across a version bump, reapply the overrides after
+> load, or fold them into the base schema.
+
 #### Automatic reconciliation
 
 Most changes need no extra code. When the version changes, the framework
@@ -1023,6 +1033,7 @@ reconciles every saved character against the new schema:
 | **Trait removed** | Dropped from the character. |
 | **Range narrowed** | Out-of-range values are clamped into the new range. |
 | **Range widened** | Values are unchanged. |
+| **Constraint left violated** | If clamping a trait leaves an inter-trait constraint broken (e.g. a Sphere now exceeds a lowered Arete), the dependent trait is lowered until the constraint holds. |
 
 This is graceful by default: the save loads, changes are logged, and a brief
 toast tells the player their save was updated.

@@ -392,6 +392,129 @@ class TestConstraintReconciliation:
         assert "Forces" in str(exc.value)
 
 
+# --- Resource pool reconciliation -----------------------------------------
+
+
+class TestResourceReconciliation:
+    """On a version bump the ResourceManager is rebuilt onto the splat's current
+    resource config, so pools an author adds or renames exist and carry their
+    values, and pools removed from the config are dropped."""
+
+    def test_pool_rename_via_step_is_applied(self):
+        # The bug Codex flagged: a step renames the Quintessence pool to Mana.
+        # The pickled manager has no Mana pool, but rebuilding against the
+        # current config (which defines Mana) lets the value land and gate work.
+        migrations.register_migration(
+            "s", "1", "2",
+            lambda st: st["resources"].__setitem__(
+                "Mana", st["resources"].pop("Quintessence")
+            ),
+        )
+        migrations.register_current_resources(
+            "s", {"resources": {"Mana": {"range": [0, 20], "default": 0}}}
+        )
+        char = Character(make_schema("1", ["A"]), traits={"A": 1}, splat_id="s")
+        char.resources = ResourceManager(
+            {"resources": {"Quintessence": {"range": [0, 20], "default": 10}}}
+        )
+        restored, _ = save_then_load(char, make_schema("2", ["A"]))
+        assert restored.resources.has_resource("Mana")
+        assert not restored.resources.has_resource("Quintessence")
+        assert restored.resources.current("Mana") == 10
+        # gate on the renamed pool now succeeds instead of raising KeyError.
+        assert restored.gate("Mana", ">=", 10) is True
+
+    def test_added_pool_gets_default_and_existing_value_carries(self):
+        migrations.register_current_resources(
+            "s", {"resources": {
+                "Quintessence": {"range": [0, 20], "default": 0},
+                "Paradox": {"range": [0, 20], "default": 3},
+            }},
+        )
+        char = Character(make_schema("1", ["A"]), traits={"A": 1}, splat_id="s")
+        char.resources = ResourceManager(
+            {"resources": {"Quintessence": {"range": [0, 20], "default": 5}}}
+        )
+        char.resources.pools["Quintessence"].current_value = 7
+        restored, reports = save_then_load(char, make_schema("2", ["A"]))
+        assert restored.resources.current("Quintessence") == 7   # carried over
+        assert restored.resources.current("Paradox") == 3        # new, at default
+        assert "Paradox" in reports[0].resources_added
+
+    def test_pool_removed_from_config_is_dropped(self):
+        migrations.register_current_resources(
+            "s", {"resources": {"Quintessence": {"range": [0, 20], "default": 0}}}
+        )
+        char = Character(make_schema("1", ["A"]), traits={"A": 1}, splat_id="s")
+        char.resources = ResourceManager({"resources": {
+            "Quintessence": {"range": [0, 20], "default": 5},
+            "Obsolete": {"range": [0, 10], "default": 4},
+        }})
+        restored, reports = save_then_load(char, make_schema("2", ["A"]))
+        assert restored.resources.has_resource("Quintessence")
+        assert not restored.resources.has_resource("Obsolete")
+        assert ("Obsolete", 4) in reports[0].resources_dropped
+
+    def test_carried_value_above_pool_max_raises_max(self):
+        # Mirrors the loader: a carried-over value beyond the configured max
+        # lifts the max rather than silently clamping the player's total.
+        migrations.register_current_resources(
+            "s", {"resources": {"Willpower": {"range": [0, 10], "default": 5}}}
+        )
+        char = Character(make_schema("1", ["A"]), traits={"A": 1}, splat_id="s")
+        char.resources = ResourceManager(
+            {"resources": {"Willpower": {"range": [0, 10], "default": 5}}}
+        )
+        char.resources.pools["Willpower"].current_value = 8
+        restored, _ = save_then_load(char, make_schema("2", ["A"]))
+        assert restored.resources.current("Willpower") == 8
+        assert restored.resources.pools["Willpower"].max >= 8
+
+    def test_no_registered_config_falls_back_to_existing_pools(self):
+        # Without a registered resource config, the pickled manager's pools are
+        # reused and only their values updated (legacy behavior preserved).
+        migrations.register_migration(
+            "s", "1", "2",
+            lambda st: st["resources"].__setitem__("mana", 3),
+        )
+        char = Character(make_schema("1", ["A"]), traits={"A": 1}, splat_id="s")
+        char.resources = ResourceManager(
+            {"resources": {"mana": {"range": [0, 20], "default": 10}}}
+        )
+        restored, _ = save_then_load(char, make_schema("2", ["A"]))
+        assert restored.resources.current("mana") == 3
+
+    def test_strict_raises_on_dropped_resource(self):
+        migrations.strict = True
+        migrations.register_current_resources(
+            "s", {"resources": {"Quintessence": {"range": [0, 20], "default": 0}}}
+        )
+        char = Character(make_schema("1", ["A"]), traits={"A": 1}, splat_id="s")
+        char.resources = ResourceManager({"resources": {
+            "Quintessence": {"range": [0, 20], "default": 5},
+            "Obsolete": {"range": [0, 10], "default": 4},
+        }})
+        with pytest.raises(migrations.MigrationError) as exc:
+            save_then_load(char, make_schema("2", ["A"]))
+        assert "Obsolete" in str(exc.value)
+
+    def test_strict_allows_added_resource(self):
+        # Adding a pool is not data loss, so strict mode permits it.
+        migrations.strict = True
+        migrations.register_current_resources(
+            "s", {"resources": {
+                "Quintessence": {"range": [0, 20], "default": 0},
+                "Paradox": {"range": [0, 20], "default": 3},
+            }},
+        )
+        char = Character(make_schema("1", ["A"]), traits={"A": 1}, splat_id="s")
+        char.resources = ResourceManager(
+            {"resources": {"Quintessence": {"range": [0, 20], "default": 5}}}
+        )
+        restored, _ = save_then_load(char, make_schema("2", ["A"]))
+        assert restored.resources.current("Paradox") == 3
+
+
 # --- Reports & surfacing ---------------------------------------------------
 
 

@@ -104,8 +104,11 @@ class SplatLoader:
                 schema.version = str(manifest_version)
 
         # Register as this splat's current schema so saves written under an
-        # older schema version can be migrated onto it when loaded.
+        # older schema version can be migrated onto it when loaded. The resource
+        # config is registered too, so migration can rebuild a loaded character's
+        # pools onto it (adding or renaming pools the author changed).
         migrations.register_current_schema(splat_id, schema)
+        migrations.register_current_resources(splat_id, resource_config)
 
         # Load chargen config if present
         chargen_config = None

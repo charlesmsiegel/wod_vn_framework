@@ -31,7 +31,7 @@ A complete reference for writing World of Darkness visual novels with the framew
 ### Requirements
 
 - [Ren'Py 8.x](https://www.renpy.org/latest.html) (Python 3 SDK)
-- Python 3.10+ (for running the bracket shorthand CLI and tests outside of Ren'Py)
+- Python 3.10+ (optional — only needed for the bracket shorthand CLI and running tests outside of Ren'Py; the shorthand also compiles automatically inside Ren'Py)
 
 ### Setup
 
@@ -442,24 +442,54 @@ For authors who prefer a more concise syntax, the framework includes a pre-proce
 - `[via method]` becomes `wod_core.can_use("method")` -- paradigm/Focus gating (see [Paradigm & Focus Gating](#paradigm--focus-gating-optional)). `[!via method]` negates it.
 - Multiple conditions separated by commas are joined with `and`.
 
-### Running the Pre-Processor
+### Automatic compilation (no build step)
+
+You don't need to run anything. When you launch your game from the Ren'Py SDK, the framework compiles bracket shorthand into native Ren'Py **automatically, at init time**. Just write `[Forces >= 3]` in your `.rpy` files and run the game.
+
+How it works: `game/00_wod_preprocess.rpy` runs during Ren'Py's `python early` phase — before your other `.rpy` files are parsed. Because its filename sorts first, its early block can rewrite the remaining `.rpy` files on disk, so Ren'Py parses the transformed (valid) source in the same run. The transform is **idempotent** — once a line is compiled to an `if` expression there is no shorthand left, so launching again rewrites nothing.
+
+A line is printed to the console/log for each file it compiles:
+
+```
+WoD: compiled bracket shorthand in script.rpy
+```
+
+Notes and limits:
+
+- **It edits your `.rpy` in place.** The shorthand is replaced by the equivalent `if` expression, exactly as the CLI does. Keep your project under version control so you can review the diff. (Add the brackets back any time you prefer the shorthand; they'll recompile on the next launch.)
+- **Packaged builds are safe.** Distributed builds ship precompiled `.rpyc` with no shorthand to transform, and a read-only tree is handled gracefully. The pass also best-effort skips when Ren'Py has resolved developer mode off — but because it runs in `python early`, an init-time `config.developer = False` (in `options.rpy`) is evaluated *too late* to gate it. To force the pass off, use `WOD_AUTO_PREPROCESS=0` (see Opt out, below).
+- **File ordering.** Files that sort *before* `00_wod_preprocess.rpy` (e.g. a name beginning with `000`) are parsed before the early block runs and won't be auto-compiled — keep the framework's `00_` prefix ahead of your own files, or compile those with the CLI.
+- **Opt out** with the `WOD_AUTO_PREPROCESS` environment variable — set it to `0` when launching. It's read before any script runs, so it always takes effect regardless of file order, and it's the right switch for CI, `renpy lint`, or a CLI-only workflow:
+  ```bash
+  WOD_AUTO_PREPROCESS=0 renpy.sh game/
+  ```
+  The `wod_core.config.auto_preprocess` flag also disables the pass, but since it runs in `python early` you must set the flag *that* early — in a `python early` block in a file that sorts before `00_wod_preprocess.rpy` (e.g. `000_config.rpy`). Setting it in `init python` runs too late to have any effect:
+  ```renpy
+  ## game/000_config.rpy — sorts before the preprocessor
+  python early:
+      import wod_core
+      wod_core.config.auto_preprocess = False
+  ```
+
+### Running the Pre-Processor manually (CLI)
+
+The same transform is available as a CLI tool for explicit/batch use, CI checks, or projects that disable the automatic pass:
 
 ```bash
-# Transform files in-place
+# Transform a file in place
 python -m wod_core game/script.rpy
 
-# Preview without modifying files
+# Preview without modifying files (prints the transformed source)
 python -m wod_core --dry-run game/script.rpy
 
 # Process multiple files
 python -m wod_core game/script.rpy game/chapter2.rpy
+
+# Process a whole directory tree
+python -m wod_core game/
 ```
 
-The pre-processor prints `Transformed: <file>` or `No changes: <file>` to stderr for each file.
-
-### Important
-
-The pre-processor modifies files **in place**. Run `--dry-run` first to review changes. Once transformed, the file contains standard Ren'Py syntax and the bracket shorthand is gone -- you can continue editing the transformed file normally.
+The pre-processor prints `Transformed: <file>` or `No changes: <file>` to stderr for each file (or `Would transform:` under `--dry-run` for directories).
 
 ---
 
@@ -1122,6 +1152,7 @@ Test files:
 | `tests/test_resources.py` | Spend/gain, linked pools (Quintessence Wheel), pool caps |
 | `tests/test_chargen.py` | ChargenState, PointPool allocation, build_character |
 | `tests/test_syntax.py` | Bracket shorthand parsing and transformation |
+| `tests/test_preprocess.py` | File/directory transforms and the init-time entry point |
 | `tests/test_loader.py` | YAML loading, splat discovery, character loading, overrides |
 | `tests/test_integration.py` | End-to-end flows combining multiple subsystems |
 

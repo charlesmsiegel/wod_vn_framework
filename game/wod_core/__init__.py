@@ -72,6 +72,13 @@ class _Config:
     """Framework configuration."""
     show_gate_toasts = False
     gate_toast_format = "{trait} {value} — {result}"
+    # When True, bracket shorthand ([Forces >= 3]) is compiled to native
+    # Ren'Py automatically at init time, in developer mode. The pass runs in
+    # `python early`, so this flag only disables it when set that early (a
+    # `python early` block in a file sorting before 00_wod_preprocess.rpy);
+    # for an ordering-independent opt-out set WOD_AUTO_PREPROCESS=0 instead.
+    # See game/00_wod_preprocess.rpy.
+    auto_preprocess = True
 
 config = _Config()
 

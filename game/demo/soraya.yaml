@@ -1,0 +1,69 @@
+# Demo chronicle protagonist: Soraya Mir, Order of Hermes
+#
+# Stats are tuned so every "main path" branch of THE HOLLOW VIGIL is reachable,
+# while a few "premium" gates stay just out of reach to demonstrate how gating
+# hides choices (e.g. Correspondence >= 3, Forces >= 4).
+#
+# Reachable gates:  Forces 3 / Prime 2 / Spirit 2 / Awareness 3 / Occult 3 /
+#                   Investigation 3 / Expression 2 / Mentor 3 / Avatar 3 / Node 2
+# Hidden gates:     Correspondence >= 3 (has 1) / Forces >= 4 (has 3) / Contacts (has 0)
+schema: mage
+template: default_mage
+character_type: pc
+
+identity:
+  name: "Soraya Mir"
+  tradition: "Order of Hermes"
+  essence: "Pattern"
+  resonance: "Static"
+  nature: "Visionary"
+  demeanor: "Architect"
+  concept: "Ley-line cartographer and reluctant heir to a vanished mentor"
+
+traits:
+  attributes:
+    Strength: 2
+    Dexterity: 2
+    Stamina: 3
+    Charisma: 3
+    Manipulation: 3
+    Appearance: 2
+    Perception: 4
+    Intelligence: 4
+    Wits: 3
+  abilities:
+    Alertness: 2
+    Awareness: 3
+    Expression: 2
+    Meditation: 2
+    Research: 2
+    Academics: 2
+    Cosmology: 2
+    Esoterica: 2
+    Investigation: 3
+    Occult: 3
+    Technology: 1
+  spheres:
+    Forces: 3
+    Prime: 2
+    Spirit: 2
+    Correspondence: 1
+  arete:
+    Arete: 3
+  backgrounds:
+    Avatar: 3
+    Mentor: 3
+    Node: 2
+    Sanctum: 1
+    Wonder: 1
+  resonance:
+    Static: 2
+
+resources:
+  quintessence: 8
+  paradox: 0
+  willpower: 6
+
+merits_flaws:
+  - { name: "Natural Channel", type: merit, value: 3 }
+  - { name: "Nightmares", type: flaw, value: -1 }

@@ -39,7 +39,10 @@ You write your story in Ren'Py. The framework handles character stats, resource 
    renpy.sh wod_vn_framework/game/
    ```
 
-The demo loads a pre-built Mage character (Elena Vasquez) and walks through stat-gated choices, resource spending, and outcome branching.
+The title screen offers two demos:
+
+- **The Hollow Vigil** — a 5-scene branching Mage chronicle (Soraya Mir, Order of Hermes) with multiple endings, image placeholders, and an art manifest. It exercises every core feature: stat gating, merits/flaws, the Quintessence–Paradox Wheel, Willpower/Health, mid-story advancement, and toasts. See [docs/demo-chronicle.md](docs/demo-chronicle.md). It plays start-to-finish with **no art assets** — every image renders a labelled placeholder until you supply the real file.
+- **Elena vs. the Technocratic Ward** — a short single-scene feature demo (Elena Vasquez) walking through stat-gated choices, resource spending, and outcome branching.
 
 ### Start a new game project
 
@@ -61,7 +64,9 @@ Click "Use this template" on GitHub to create a new repo, then follow the steps 
 ```
 wod_vn_framework/
   game/
-    script.rpy              # Your game script (demo included)
+    script.rpy              # Demo launcher (chronicle + feature demo)
+    chronicle.rpy           # "The Hollow Vigil" — 5-scene demo chronicle
+    images.rpy              # Art registry: real files, or auto placeholders
     wod_init.rpy            # Framework bootstrap — loads engine and splats
     wod_core/               # Python engine
       __init__.py           #   Public API (load_character, chargen, show_hud, etc.)
@@ -85,13 +90,17 @@ wod_vn_framework/
         chargen.yaml        #   Chargen modes, traditions, archetypes, merits/flaws
         templates/          #   Pre-built character templates
     demo/
-      elena.yaml            # Demo character file
+      elena.yaml            # Feature-demo character
+      soraya.yaml           # Chronicle protagonist (Soraya Mir)
+    images/
+      manifest.yaml         # Canonical art manifest for the chronicle
     themes/
       gothic/               # Default dark theme assets
       neutral/              # Fallback neutral theme
   tests/                    # pytest test suite
   docs/
     author-guide.md         # Complete reference for writing games with the framework
+    demo-chronicle.md       # Walkthrough + image manifest for "The Hollow Vigil"
 ```
 
 ## For Authors

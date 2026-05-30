@@ -10,6 +10,22 @@ default pc = None
 
 label start:
 
+    ## WoD VN Framework — demo launcher.
+    ## Pick the multi-scene chronicle or the short feature demo.
+    scene black with fade
+
+    menu:
+        "{b}WoD VN Framework{/b} — choose a demo:"
+
+        "The Hollow Vigil — a Mage demo chronicle (5 scenes)":
+            jump chronicle_start
+
+        "Quick feature demo — Elena vs. the Technocratic Ward":
+            jump feature_demo
+
+
+label feature_demo:
+
     ## Load the demo character
     $ pc = wod_core.load_character("demo/elena.yaml")
     $ wod_core.set_active(pc)

@@ -2,6 +2,11 @@
 
 A complete reference for writing World of Darkness visual novels with the framework.
 
+> **Looking for a worked example?** [`docs/demo-chronicle.md`](demo-chronicle.md)
+> walks through *The Hollow Vigil* — a 5-scene branching Mage chronicle
+> (`game/chronicle.rpy`) that exercises every feature in this guide, with image
+> placeholders and an art manifest.
+
 ---
 
 ## Table of Contents

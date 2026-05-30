@@ -1,0 +1,48 @@
+schema: mage
+template: ds_spirit_walker
+character_type: pc
+identity:
+  name: ""
+  tradition: "Dreamspeakers"
+  essence: "Primordial"
+  resonance: "Dynamic"
+  nature: "Visionary"
+  demeanor: "Loner"
+traits:
+  attributes:
+    Strength: 2
+    Dexterity: 2
+    Stamina: 3
+    Charisma: 3
+    Manipulation: 1
+    Appearance: 2
+    Perception: 4
+    Intelligence: 2
+    Wits: 3
+  abilities:
+    Awareness: 3
+    Cosmology: 1
+    Empathy: 2
+    Medicine: 2
+    Meditation: 1
+    Occult: 3
+    Survival: 2
+  spheres:
+    Spirit: 3
+    Life: 2
+    Prime: 1
+  arete:
+    Arete: 3
+  resonance:
+    Dynamic: 1
+  backgrounds:
+    Avatar: 2
+    Familiar: 2
+    Mentor: 2
+    Node: 1
+resources:
+  quintessence: 5
+  paradox: 0
+  willpower: 5
+merits_flaws:
+  - { name: "Avatar Companion", type: merit, value: 3 }

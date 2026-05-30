@@ -1,0 +1,48 @@
+schema: mage
+template: cc_sacred_singer
+character_type: pc
+identity:
+  name: ""
+  tradition: "Celestial Chorus"
+  essence: "Primordial"
+  resonance: "Static"
+  nature: "Celebrant"
+  demeanor: "Idealist"
+traits:
+  attributes:
+    Strength: 1
+    Dexterity: 2
+    Stamina: 2
+    Charisma: 4
+    Manipulation: 2
+    Appearance: 3
+    Perception: 3
+    Intelligence: 3
+    Wits: 2
+  abilities:
+    Academics: 2
+    Art: 2
+    Awareness: 1
+    Empathy: 2
+    Expression: 3
+    Leadership: 2
+    Occult: 2
+  spheres:
+    Prime: 3
+    Forces: 2
+    Spirit: 1
+  arete:
+    Arete: 3
+  resonance:
+    Static: 1
+  backgrounds:
+    Avatar: 2
+    Allies: 2
+    Influence: 2
+    Mentor: 1
+resources:
+  quintessence: 5
+  paradox: 0
+  willpower: 5
+merits_flaws:
+  - { name: "Natural Channel", type: merit, value: 3 }

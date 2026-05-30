@@ -1,0 +1,48 @@
+schema: mage
+template: coe_temporal_dancer
+character_type: pc
+identity:
+  name: ""
+  tradition: "Cult of Ecstasy"
+  essence: "Dynamic"
+  resonance: "Dynamic"
+  nature: "Thrill-Seeker"
+  demeanor: "Bon Vivant"
+traits:
+  attributes:
+    Strength: 1
+    Dexterity: 4
+    Stamina: 2
+    Charisma: 3
+    Manipulation: 2
+    Appearance: 4
+    Perception: 3
+    Intelligence: 1
+    Wits: 2
+  abilities:
+    Art: 2
+    Athletics: 2
+    Awareness: 3
+    Empathy: 2
+    Expression: 2
+    Meditation: 1
+    Occult: 1
+    Streetwise: 1
+  spheres:
+    Time: 3
+    Life: 2
+    Mind: 1
+  arete:
+    Arete: 3
+  resonance:
+    Dynamic: 1
+  backgrounds:
+    Avatar: 2
+    Dream: 2
+    Contacts: 2
+    Resources: 1
+resources:
+  quintessence: 4
+  paradox: 0
+  willpower: 5
+merits_flaws: []

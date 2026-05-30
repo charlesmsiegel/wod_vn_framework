@@ -1,0 +1,46 @@
+schema: mage
+template: akashic_dream
+character_type: pc
+identity:
+  name: ""
+  tradition: "Akashic Brotherhood"
+  essence: "Questing"
+  resonance: "Dynamic"
+  nature: "Visionary"
+  demeanor: "Caregiver"
+traits:
+  attributes:
+    Strength: 1
+    Dexterity: 2
+    Stamina: 2
+    Charisma: 3
+    Manipulation: 3
+    Appearance: 2
+    Perception: 3
+    Intelligence: 3
+    Wits: 3
+  abilities:
+    Awareness: 3
+    Cosmology: 2
+    Empathy: 2
+    Enigmas: 1
+    Expression: 1
+    Meditation: 3
+    Occult: 2
+  spheres:
+    Mind: 3
+    Spirit: 2
+    Correspondence: 1
+  arete:
+    Arete: 3
+  resonance:
+    Dynamic: 1
+  backgrounds:
+    Avatar: 3
+    Dream: 2
+    Mentor: 2
+resources:
+  quintessence: 4
+  paradox: 0
+  willpower: 5
+merits_flaws: []

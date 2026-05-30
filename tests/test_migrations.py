@@ -284,6 +284,20 @@ class TestAuthorMigrations:
         assert restored.get("A") == 1
         assert any("Unresolved" in n for n in reports[0].notes)
 
+    def test_failed_step_rolls_back_partial_mutation(self):
+        # A step that pops the old key and then fails must not leave the data
+        # half-migrated: the value should survive via rollback + reconciliation.
+        def _bad_rename(state):
+            state["traits"]["TEMP"] = state["traits"].pop("Old")
+            raise RuntimeError("transform failed")
+
+        migrations.register_migration("s", "1", "2", _bad_rename)
+        char = Character(make_schema("1", ["Old", "B"]), traits={"Old": 4, "B": 2}, splat_id="s")
+        restored, reports = save_then_load(char, make_schema("2", ["Old", "B"]))
+        assert restored.get("Old") == 4          # not lost to the partial pop
+        assert "TEMP" not in restored.traits      # partial mutation discarded
+        assert any("transform failed" in n for n in reports[0].notes)
+
 
 # --- Strict mode -----------------------------------------------------------
 
@@ -321,6 +335,61 @@ class TestStrictMode:
         char = Character(make_schema("1", ["A"]), traits={"A": 1}, splat_id="s")
         restored, _ = save_then_load(char, make_schema("2", ["A", "B"]))
         assert restored.get("B") == 0
+
+
+# --- Inter-trait constraint reconciliation ---------------------------------
+
+
+class TestConstraintReconciliation:
+    """A version bump that lowers a depended-on trait must not leave the
+    character violating an inter-trait constraint (e.g. Sphere <= Arete)."""
+
+    @staticmethod
+    def _schema(version, arete_range, sphere_range):
+        return Schema({
+            "version": version,
+            "trait_categories": {
+                "arete": {"display_name": "Arete", "traits": ["Arete"],
+                          "default": 1, "range": list(arete_range)},
+                "spheres": {"display_name": "Spheres", "traits": ["Forces", "Prime"],
+                            "default": 0, "range": list(sphere_range)},
+            },
+            "trait_constraints": [{
+                "type": "max_linked", "target_category": "spheres",
+                "limited_by": "Arete", "rule": "No Sphere may exceed Arete",
+            }],
+        })
+
+    def test_sphere_clamped_when_arete_narrowed(self):
+        v1 = self._schema("1", (1, 10), (0, 10))
+        char = Character(v1, traits={"Arete": 5, "Forces": 5}, splat_id="m")
+        v2 = self._schema("2", (1, 3), (0, 10))  # Arete capped at 3 now
+        restored, reports = save_then_load(char, v2)
+        assert restored.get("Arete") == 3                       # range-clamped
+        assert restored.get("Forces") == 3                      # constraint-repaired
+        assert ("Forces", 5, 3) in reports[0].constraint_adjusted
+        # The loaded character is internally consistent: set() accepts it.
+        restored.set("Forces", 3)
+
+    def test_range_clamp_without_constraint_violation(self):
+        # Forces is range-clamped, but Arete stays high enough that Sphere<=Arete
+        # still holds, so no constraint repair occurs (only the range clamp).
+        v1 = self._schema("1", (1, 10), (0, 10))
+        char = Character(v1, traits={"Arete": 8, "Forces": 7}, splat_id="m")
+        v2 = self._schema("2", (1, 10), (0, 5))
+        restored, reports = save_then_load(char, v2)
+        assert restored.get("Forces") == 5                 # range-clamped
+        assert reports[0].clamped == [("Forces", 7, 5)]
+        assert reports[0].constraint_adjusted == []         # constraint untouched
+
+    def test_strict_raises_on_constraint_adjustment(self):
+        migrations.strict = True
+        v1 = self._schema("1", (1, 10), (0, 10))
+        char = Character(v1, traits={"Arete": 5, "Forces": 5}, splat_id="m")
+        v2 = self._schema("2", (1, 3), (0, 10))
+        with pytest.raises(migrations.MigrationError) as exc:
+            save_then_load(char, v2)
+        assert "Forces" in str(exc.value)
 
 
 # --- Reports & surfacing ---------------------------------------------------

@@ -33,6 +33,7 @@ would lose or clamp data, or an author step fails.
 
 from __future__ import annotations
 
+import copy
 import logging
 from dataclasses import dataclass, field
 from typing import Callable
@@ -148,11 +149,16 @@ class MigrationReport:
     dropped: list = field(default_factory=list)      # trait names removed
     clamped: list = field(default_factory=list)      # (trait, old_value, new_value)
     steps_applied: list = field(default_factory=list)  # (from_version, to_version)
+    # (trait, old_value, new_value) lowered to satisfy an inter-trait constraint
+    constraint_adjusted: list = field(default_factory=list)
     notes: list = field(default_factory=list)         # freeform / author messages
 
     @property
     def changed(self) -> bool:
-        return bool(self.added or self.dropped or self.clamped or self.steps_applied)
+        return bool(
+            self.added or self.dropped or self.clamped
+            or self.constraint_adjusted or self.steps_applied
+        )
 
     def summary(self) -> str:
         """A one-line, player-friendly summary suitable for a toast."""
@@ -163,8 +169,9 @@ class MigrationReport:
             parts.append(f"{len(self.added)} trait(s) added")
         if self.dropped:
             parts.append(f"{len(self.dropped)} trait(s) removed")
-        if self.clamped:
-            parts.append(f"{len(self.clamped)} value(s) adjusted")
+        adjusted = len(self.clamped) + len(self.constraint_adjusted)
+        if adjusted:
+            parts.append(f"{adjusted} value(s) adjusted")
         detail = ", ".join(parts) if parts else "no changes"
         return (
             f"Save updated: {self.splat_id} schema "
@@ -247,6 +254,40 @@ def _reconcile_traits(char, schema, report: MigrationReport) -> None:
     char.traits = reconciled
 
 
+def _enforce_constraints(char, schema, report: MigrationReport) -> None:
+    """Repair inter-trait constraint violations introduced by reconciliation.
+
+    Per-trait range clamping can still leave a constraint unsatisfied — e.g.
+    clamping ``Arete`` down below a Sphere that ``MaxLinkedConstraint`` caps by
+    it, leaving the loaded character in a state that ``set()`` would reject. For
+    each violated constraint, lower the offending trait one step at a time until
+    it holds (bounded by the trait's own minimum). Each adjustment is recorded so
+    it is reported and, in strict mode, treated as data loss.
+    """
+    for constraint in getattr(schema, "constraints", []):
+        for trait_name in list(char.traits.keys()):
+            if not schema.has_trait(trait_name):
+                continue
+            original = char.traits[trait_name]
+            floor = schema.get_range(trait_name)[0]
+            while char.traits[trait_name] > floor:
+                try:
+                    ok, _ = constraint.validate(
+                        trait_name, char.traits[trait_name], char, schema
+                    )
+                except Exception:
+                    # Cannot evaluate this constraint (e.g. it references a trait
+                    # that no longer exists) — leave the value untouched.
+                    break
+                if ok:
+                    break
+                char.traits[trait_name] -= 1
+            if char.traits[trait_name] != original:
+                report.constraint_adjusted.append(
+                    (trait_name, original, char.traits[trait_name])
+                )
+
+
 def _data_loss_message(report: MigrationReport) -> str:
     bits = []
     if report.dropped:
@@ -255,6 +296,11 @@ def _data_loss_message(report: MigrationReport) -> str:
         bits.append(
             "clamped value(s): "
             + ", ".join(f"{n} {o}→{v}" for n, o, v in report.clamped)
+        )
+    if report.constraint_adjusted:
+        bits.append(
+            "constraint-adjusted value(s): "
+            + ", ".join(f"{n} {o}→{v}" for n, o, v in report.constraint_adjusted)
         )
     return (
         f"Cannot migrate {report.splat_id} save from schema "
@@ -289,7 +335,7 @@ def migrate_character(char, saved_version, current_schema) -> MigrationReport:
         "merits_flaws": list(getattr(char, "merits_flaws", []) or []),
         "identity": dict(getattr(char, "identity", {}) or {}),
         "resources": _resource_snapshot(char),
-        "notes": report.notes,
+        "notes": [],
     }
 
     try:
@@ -298,10 +344,15 @@ def migrate_character(char, saved_version, current_schema) -> MigrationReport:
         if strict:
             raise
         logger.warning("Migration chain unresolved for %r; reconciling instead.", splat_id)
-        report.notes.append(f"Unresolved migration chain for {splat_id!r}.")
+        state["notes"].append(f"Unresolved migration chain for {splat_id!r}.")
         chain = []
 
     for step_from, step_to, fn in chain:
+        # Snapshot before the step so that a step which mutates `state` and then
+        # raises does not leave half-applied changes behind (e.g. a rename that
+        # has popped the old key but not yet written the new one). On failure we
+        # discard the step's partial mutations and fall back to reconciliation.
+        before = copy.deepcopy(state)
         try:
             fn(state)
         except Exception as exc:  # noqa: BLE001 — surface author step failures
@@ -312,10 +363,13 @@ def migrate_character(char, saved_version, current_schema) -> MigrationReport:
             if strict:
                 raise MigrationError(msg) from exc
             logger.warning(msg)
-            report.notes.append(msg)
+            state = before  # roll back this step's partial mutations
+            state["notes"].append(msg)
             break
         state["version"] = step_to
         report.steps_applied.append((step_from, step_to))
+
+    report.notes.extend(state["notes"])
 
     # Write author-mutated collections back onto the character.
     char.traits = dict(state["traits"])
@@ -323,10 +377,12 @@ def migrate_character(char, saved_version, current_schema) -> MigrationReport:
     char.identity = dict(state["identity"])
     _apply_resource_snapshot(char, state["resources"])
 
-    # 2. Reconcile trait keys/values against the current schema.
+    # 2. Reconcile trait keys/values against the current schema, then repair any
+    # inter-trait constraints left violated by per-trait clamping.
     _reconcile_traits(char, current_schema, report)
+    _enforce_constraints(char, current_schema, report)
 
-    if strict and (report.dropped or report.clamped):
+    if strict and (report.dropped or report.clamped or report.constraint_adjusted):
         raise MigrationError(_data_loss_message(report))
 
     # 3. Record the report.

@@ -12,11 +12,14 @@ from __future__ import annotations
 
 import re
 
-# Match bracket conditions on a menu choice line.
+# Match bracket conditions on a menu choice line, capturing an optional
+# (locked="...") annotation separately so it can be repositioned ahead of the
+# generated `if` clause (Ren'Py menu-choice arguments must precede the `if`).
 _BRACKET_RE = re.compile(
-    r'^(\s*"[^"]*")\s*'           # leading whitespace + quoted text
-    r'\[([^\]]+)\]'               # [conditions]
-    r'(\s*(?:\(.*\))?\s*:\s*)$'   # optional (locked=...) + colon
+    r'^(\s*"[^"]*")\s*'           # 1: leading whitespace + quoted text
+    r'\[([^\]]+)\]'               # 2: [conditions]
+    r'\s*(\(.*\))?'               # 3: optional (locked="...") annotation
+    r'(\s*:\s*)$'                 # 4: colon (and surrounding whitespace)
 )
 
 _COMPARISON_RE = re.compile(
@@ -75,19 +78,27 @@ def parse_condition(cond: str) -> str:
 
 
 def transform_line(line: str) -> str:
-    """Transform a single line, replacing bracket shorthand with if expressions."""
+    """Transform a single line, replacing bracket shorthand with if expressions.
+
+    A trailing ``(locked="...")`` annotation is preserved and re-emitted as
+    Ren'Py menu-choice arguments *before* the generated ``if`` clause, so the
+    choice screen can show the gated-off option greyed-out with a hint rather
+    than hiding it.
+    """
     m = _BRACKET_RE.match(line)
     if not m:
         return line
 
     prefix = m.group(1)
     conditions = m.group(2)
-    suffix = m.group(3)
+    annotation = m.group(3)   # e.g. '(locked="You lack the knowledge...")' or None
+    suffix = m.group(4)       # the trailing colon
 
     parts = [parse_condition(c) for c in conditions.split(",")]
     condition_expr = " and ".join(parts)
 
-    return f"{prefix} if {condition_expr}{suffix}"
+    annotation_part = f" {annotation}" if annotation else ""
+    return f"{prefix}{annotation_part} if {condition_expr}{suffix}"
 
 
 def transform_source(source: str) -> str:

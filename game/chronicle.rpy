@@ -6,7 +6,7 @@
 ##  A complete, branching short story for the WoD VN Framework. It exercises:
 ##    * Character loading from YAML + set_active + the resource HUD
 ##    * Stat-gated menu choices (Spheres, Abilities, Backgrounds, resources),
-##      including "premium" gates that stay hidden for the demo protagonist
+##      including a "premium" gate shown greyed-out via a (locked="...") hint
 ##    * Merit / Flaw checks via pc.has() (Natural Channel, Nightmares)
 ##    * Resource spend / gain: Quintessence, Willpower, Health
 ##    * The linked Quintessence/Paradox Wheel (gaining Paradox pushes the Wheel)
@@ -80,8 +80,10 @@ label chronicle_start:
             soraya "He was holding the Node open by hand. Oh, you stubborn old man."
             $ hv_knows_node = True
 
-        # Premium gate — hidden for the demo protagonist (Correspondence 1).
-        "Scry his exact location across the city" if pc.gate("Correspondence", ">=", 3):
+        # Premium gate shown as a locked choice: Soraya's Correspondence (1) is
+        # too low, so this stays greyed-out with a hint instead of vanishing —
+        # a visible glimpse of the road not yet walked. (See issue #19.)
+        "Scry his exact location across the city" (locked="Correspondence 3 — distance is not yet yours to fold.") if pc.gate("Correspondence", ">=", 3):
             "Distance folds. You stand, for a heartbeat, in his sanctum's air."
             $ hv_knows_node = True
 

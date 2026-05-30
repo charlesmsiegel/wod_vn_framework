@@ -241,3 +241,22 @@ menu:
         assert 'if wod_core.gate("Stamina", ">=", 3)' in result
         assert '"Back away":' in result
         assert "jump retreat" in result
+
+    def test_menu_block_with_locked_choice(self):
+        source = '''\
+menu:
+    "Rewrite the ward" [Prime >= 3, Forces >= 2] (locked="You lack the knowledge..."):
+        jump rewrite_ward
+    "Back away":
+        jump retreat'''
+
+        result = transform_source(source)
+        # The locked annotation is repositioned ahead of the generated `if`,
+        # producing a valid Ren'Py menu-choice with arguments + condition.
+        assert (
+            '"Rewrite the ward" (locked="You lack the knowledge...") '
+            'if wod_core.gate("Prime", ">=", 3) and wod_core.gate("Forces", ">=", 2):'
+        ) in result
+        assert result.index("(locked=") < result.index(" if ")
+        # Choices without an annotation are untouched.
+        assert '"Back away":' in result

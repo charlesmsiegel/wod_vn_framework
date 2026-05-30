@@ -204,12 +204,97 @@ style input:
 ##
 ## https://www.renpy.org/doc/html/screen_special.html#choice
 
+## Ren'Py normally drops a menu choice whose `if` condition is false before it
+## reaches this screen. Enabling menu_include_disabled passes those choices
+## through instead (as *insensitive* items), so the screen below can show the
+## ones annotated with (locked="...") greyed-out and hide the rest.
+##
+## menu_include_disabled also stops Ren'Py from skipping a menu when none of its
+## choices are available, so wrap the `menu` / `nvl_menu` store functions to
+## restore that -- and to keep an *all-locked* menu from trapping the player:
+##
+##   * no selectable and no (locked="...") choice -> skip the menu (return None),
+##     exactly as Ren'Py would by default;
+##   * only (locked="...") choices, nothing selectable -> show the locked teasers
+##     but append a "Continue" choice, so the player can leave instead of being
+##     stranded on a screen whose every row is insensitive;
+##   * at least one selectable choice -> shown unchanged.
+init python:
+    config.menu_include_disabled = True
+
+    ## Guard against re-wrapping. A script reload (Shift+R) re-runs this block
+    ## while `menu` already points at our wrapper from the previous run; without
+    ## the guard, `_wod_inner_menu = menu` would capture the *wrapper*, and since
+    ## the wrapper resolves `_wod_inner_menu` as a global at call time, every menu
+    ## would then recurse into itself.
+    if not getattr(menu, "_wod_wrapped", False):
+
+        _wod_inner_menu = menu
+        _wod_inner_nvl_menu = nvl_menu
+
+        ## Unique value returned by the auto-added "Continue" escape choice; the
+        ## wrapper maps it back to None so Ren'Py falls through past the menu.
+        ## (display_menu returns a ChoiceReturn's inner value, so this sentinel
+        ## comes back by identity, whereas a real choice returns its block index.)
+        _wod_menu_escape = object()
+
+        def _wod_escape_item():
+            ## A selectable choice that returns the _wod_menu_escape sentinel.
+            ## location=None: a synthetic escape, not a real story choice, so it
+            ## is not recorded as a "seen" choice.
+            caption = _("Continue")
+            return (caption, renpy.ui.ChoiceReturn(caption, _wod_menu_escape, sensitive=True))
+
+        def _wod_run_menu(inner, items, args, kwargs):
+            if not wod_core.menu_has_available_choice(items):
+                return None
+            if not wod_core.menu_has_selectable_choice(items):
+                ## All-locked: show the locked teasers plus an escape choice.
+                items = list(items) + [_wod_escape_item()]
+                result = inner(items, *args, **kwargs)
+                return None if result is _wod_menu_escape else result
+            return inner(items, *args, **kwargs)
+
+        def menu(items, *args, **kwargs):
+            return _wod_run_menu(_wod_inner_menu, items, args, kwargs)
+        menu._wod_wrapped = True
+
+        def nvl_menu(items, *args, **kwargs):
+            return _wod_run_menu(_wod_inner_nvl_menu, items, args, kwargs)
+        nvl_menu._wod_wrapped = True
+
 screen choice(items):
     style_prefix "choice"
 
     vbox:
         for i in items:
-            textbutton i.caption action i.action
+
+            ## A disabled choice arrives as an insensitive item, a caption as one
+            ## with action == None. Classify each so locked ones show greyed-out,
+            ## unannotated gated ones hide, and captions/available ones render
+            ## as Ren'Py would by default. (i.action.sensitive is the choice's
+            ## raw condition; Ren'Py still handles rollback insensitivity itself.)
+            $ hint = wod_core.locked_hint(i)
+            $ available = i.action is not None and getattr(i.action, "sensitive", True)
+            $ kind = wod_core.classify_choice(i.action is None, available, hint)
+
+            if kind == "locked":
+
+                ## Gated off, but annotated: greyed-out with the hint beneath it.
+                vbox:
+                    style "choice_locked_vbox"
+
+                    textbutton i.caption:
+                        action None
+                        sensitive False
+
+                    text hint style "choice_locked_hint"
+
+            elif kind != "hidden":
+
+                ## "available" (selectable) or "caption" (action is None, which
+                ## Ren'Py renders as an insensitive label) — render as default.
+                textbutton i.caption action i.action
 
 
 style choice_vbox is vbox
@@ -228,6 +313,24 @@ style choice_button is default:
 
 style choice_button_text is default:
     properties gui.text_properties("choice_button")
+
+## A gated-off choice that opted in via (locked="...") is shown as a greyed-out
+## caption (insensitive choice_button_text) with the hint beneath it.
+style choice_locked_vbox is vbox
+style choice_locked_hint is choice_button_text
+
+style choice_locked_vbox:
+    xalign 0.5
+    spacing gui.scale(2)
+
+style choice_locked_hint:
+    size gui.scale(20)
+    italic True
+    color "#7a6a52"
+    insensitive_color "#7a6a52"
+    xalign 0.5
+    textalign 0.5
+    layout "subtitle"
 
 
 ## Quick Menu screen ###########################################################
@@ -1325,9 +1428,30 @@ screen nvl(dialogue, items=None):
         ## if config.narrator_menu is set to True.
         for i in items:
 
-            textbutton i.caption:
-                action i.action
-                style "nvl_button"
+            ## Mirror the choice screen: locked choices show greyed-out with a
+            ## hint, unannotated gated choices hide, captions/available render
+            ## as default.
+            $ hint = wod_core.locked_hint(i)
+            $ available = i.action is not None and getattr(i.action, "sensitive", True)
+            $ kind = wod_core.classify_choice(i.action is None, available, hint)
+
+            if kind == "locked":
+
+                vbox:
+                    style "choice_locked_vbox"
+
+                    textbutton i.caption:
+                        action None
+                        sensitive False
+                        style "nvl_button"
+
+                    text hint style "choice_locked_hint"
+
+            elif kind != "hidden":
+
+                textbutton i.caption:
+                    action i.action
+                    style "nvl_button"
 
     add SideImage() xalign 0.0 yalign 1.0
 

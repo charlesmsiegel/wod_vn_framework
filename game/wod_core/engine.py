@@ -94,7 +94,9 @@ class MaxLinkedConstraint(Constraint):
         cat_name = schema.trait_lookup.get(trait_name)
         if cat_name != self.target_category:
             return True, ""
-        limit = character.get(self.limited_by)
+        # Compare against the base (permanent) value: a temporary buff to the
+        # limiting trait must not let a capped trait be permanently raised.
+        limit = character.base(self.limited_by)
         if value > limit:
             return False, (
                 f"{trait_name} cannot exceed {self.limited_by} "
@@ -118,6 +120,9 @@ class Character:
         self.merits_flaws = merits_flaws or []
         self.identity = identity or {}
         self.resources: ResourceManager | None = None  # set after creation
+        # Temporary trait modifiers, keyed by source name → {trait: delta}.
+        # Applied at runtime by game logic (form-shifting, buffs); never saved.
+        self.modifiers: dict[str, dict[str, int]] = {}
 
         # Initialize all traits to defaults
         for trait_name in schema.get_all_trait_names():
@@ -146,9 +151,40 @@ class Character:
                         raise ValueError(msg)
 
     def get(self, name: str) -> int:
+        """Effective trait value — base plus the sum of all active modifiers."""
+        if name not in self.traits:
+            raise KeyError(f"Unknown trait: {name!r}")
+        return self.traits[name] + self.modifier_total(name)
+
+    def base(self, name: str) -> int:
+        """Permanent trait value, ignoring any temporary modifiers."""
         if name not in self.traits:
             raise KeyError(f"Unknown trait: {name!r}")
         return self.traits[name]
+
+    def modifier_total(self, name: str) -> int:
+        """Sum of every active modifier on a trait, across all sources."""
+        return sum(source.get(name, 0) for source in self.modifiers.values())
+
+    def apply_modifier(self, name: str, delta: int, source: str) -> None:
+        """Add a temporary modifier to a trait, tracked by source name.
+
+        Modifiers stack: multiple sources add together, and repeated calls
+        from the same source accumulate. Remove them with remove_modifier().
+        Modifiers are runtime-only and never persist in saves.
+        """
+        if not self.schema.has_trait(name):
+            raise KeyError(f"Unknown trait: {name!r}")
+        source_mods = self.modifiers.setdefault(source, {})
+        source_mods[name] = source_mods.get(name, 0) + delta
+
+    def remove_modifier(self, source: str) -> None:
+        """Remove every modifier contributed by a source. No-op if absent."""
+        self.modifiers.pop(source, None)
+
+    def clear_modifiers(self) -> None:
+        """Remove all temporary modifiers from every source."""
+        self.modifiers.clear()
 
     def set(self, name: str, value: int) -> None:
         if not self.schema.has_trait(name):
@@ -165,7 +201,8 @@ class Character:
         self.traits[name] = value
 
     def advance(self, name: str) -> None:
-        self.set(name, self.get(name) + 1)
+        # Advance the permanent base value, not the temporarily-modified one.
+        self.set(name, self.base(name) + 1)
 
     def has(self, name: str) -> bool:
         return any(mf["name"] == name for mf in self.merits_flaws)
@@ -193,6 +230,8 @@ class Character:
     def __getstate__(self):
         """Exclude Schema object from pickle — store raw data instead."""
         state = self.__dict__.copy()
+        # Temporary modifiers are reapplied by game logic — never persisted.
+        state.pop("modifiers", None)
         # Schema is large and reconstructable — store the raw data instead
         if "schema" in state:
             schema = state.pop("schema")
@@ -228,6 +267,8 @@ class Character:
             self.schema = Schema(schema_data)
         else:
             self.schema = None
+        # Modifiers are never persisted; a loaded character always starts clean.
+        self.modifiers = {}
 
     def spend(self, name: str, amount: int) -> bool:
         if self.resources is None:

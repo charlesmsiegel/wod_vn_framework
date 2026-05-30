@@ -195,6 +195,38 @@ $ name = pc.identity["name"]
 $ tradition = pc.identity.get("tradition", "Unknown")
 ```
 
+### Temporary Modifiers (Form-Shifting & Buffs)
+
+Some powers change a character's traits temporarily — a Werewolf's Crinos form adds +4 Strength and +1 Stamina, a Demon's Apocalyptic Form grants bonuses, an Art might briefly sharpen a trait. The framework tracks these as **modifiers**, applied at runtime and keyed by a **source** name so you can remove them all at once.
+
+```renpy
+## Enter Crinos: one source, several traits
+$ pc.apply_modifier("Strength", 4, "Crinos")
+$ pc.apply_modifier("Stamina", 1, "Crinos")
+
+## ...now pc.get("Strength") reflects the bonus, and gates use it too
+if pc.gate("Strength", ">=", 7):
+    "The Crinos form tears through the door."
+
+## Shift back: remove everything from that source
+$ pc.remove_modifier("Crinos")
+```
+
+How modifiers behave:
+
+- **`pc.apply_modifier(trait, delta, source)`** adds a modifier. `delta` may be negative for penalties.
+- **`pc.remove_modifier(source)`** removes every modifier from that source (no-op if the source isn't active).
+- **`pc.clear_modifiers()`** removes all modifiers from every source.
+- **Modifiers stack.** Different sources add together, and repeated calls from the same source accumulate. To reset a source, remove it and re-apply.
+- **`pc.get(trait)`** returns the effective value (base + modifiers); **`pc.base(trait)`** returns the permanent value; **`pc.modifier_total(trait)`** returns just the sum of active modifiers.
+- **Gates and the bracket shorthand use the effective value** — a buffed character clears higher thresholds automatically.
+- **Buffs can exceed the normal maximum.** Crinos can push Strength past the human cap of 5; this is intentional.
+- **`pc.advance(trait)`** raises the *base* value, never the buffed one, so leveling up mid-buff behaves correctly.
+- **Trait caps use base values.** A temporary Arete buff won't let a Mage permanently raise a Sphere above their real Arete.
+- **Modifiers never persist in saves.** Reapply them from your game logic after a load (e.g. in a `label` that restores the active form).
+
+The character sheet shows base and modified ratings apart: buffed pips render green, penalised pips red, with a numeric annotation (`+4 = 7`), and an **Active Effects** panel lists each source.
+
 ---
 
 ## 4. Stat Gating
@@ -863,7 +895,7 @@ Test files:
 
 | File | Coverage |
 |------|----------|
-| `tests/test_engine.py` | Character creation, trait get/set/advance, range validation, constraints |
+| `tests/test_engine.py` | Character creation, trait get/set/advance, range validation, constraints, temporary modifiers |
 | `tests/test_gating.py` | Gate operators, merit checks, module-level gating |
 | `tests/test_resources.py` | Spend/gain, linked pools (Quintessence Wheel), pool caps |
 | `tests/test_chargen.py` | ChargenState, PointPool allocation, build_character |

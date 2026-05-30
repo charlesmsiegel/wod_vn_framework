@@ -53,6 +53,29 @@ screen character_sheet():
                     null width 0 xfill True
                     textbutton "\u2715" action Hide("character_sheet") text_size 24 text_color "#888888" text_hover_color "#ffffff"
 
+                # Active temporary effects (form-shifting, buffs) \u2014 itemized by source
+                if pc.modifiers:
+                    frame:
+                        background "#160f24"
+                        padding (12, 8, 12, 8)
+                        xfill True
+                        vbox:
+                            spacing 2
+                            text "Active Effects" size 14 color "#b8860b"
+                            $ effect_lines = []
+                            python:
+                                for _src, _mods in pc.modifiers.items():
+                                    _parts = []
+                                    for _trait, _delta in _mods.items():
+                                        if _delta == 0:
+                                            continue
+                                        _sign = "+" if _delta > 0 else "\u2212"
+                                        _parts.append("{} {}{}".format(_trait, _sign, abs(_delta)))
+                                    if _parts:
+                                        effect_lines.append("{}: {}".format(_src, ", ".join(_parts)))
+                            for line in effect_lines:
+                                text "[line]" size 13 color "#c0c0c0"
+
                 # Tab buttons
                 hbox:
                     spacing 10
@@ -91,35 +114,13 @@ screen character_sheet():
                                                 $ group_label = group_name.capitalize()
                                                 text "[group_label]" size 14 color "#888888" italic True
                                                 for trait_name in group_traits:
-                                                    $ val = pc.get(trait_name)
-                                                    $ max_val = cat.range[1]
-                                                    if val > 0 or cat.default > 0:
-                                                        hbox:
-                                                            spacing 10
-                                                            text trait_name size 14 color "#e0e0e0" min_width 200
-                                                            hbox:
-                                                                spacing 3
-                                                                for d in range(max_val):
-                                                                    if d < val:
-                                                                        text "\u25cf" size 14 color "#b8860b"
-                                                                    else:
-                                                                        text "\u25cb" size 14 color "#444444"
+                                                    if pc.base(trait_name) > 0 or pc.modifier_total(trait_name) != 0 or cat.default > 0:
+                                                        use trait_row(pc, trait_name, cat.range[1])
                                                 null height 5
                                         else:
                                             for trait_name in cat.trait_names:
-                                                $ val = pc.get(trait_name)
-                                                $ max_val = cat.range[1]
-                                                if val > 0 or cat.default > 0:
-                                                    hbox:
-                                                        spacing 10
-                                                        text trait_name size 14 color "#e0e0e0" min_width 200
-                                                        hbox:
-                                                            spacing 3
-                                                            for d in range(max_val):
-                                                                if d < val:
-                                                                    text "\u25cf" size 14 color "#b8860b"
-                                                                else:
-                                                                    text "\u25cb" size 14 color "#444444"
+                                                if pc.base(trait_name) > 0 or pc.modifier_total(trait_name) != 0 or cat.default > 0:
+                                                    use trait_row(pc, trait_name, cat.range[1])
                                         null height 10
                             else:
                                 # Merits & Resources tab
@@ -157,3 +158,37 @@ screen character_sheet():
 
     key "K_ESCAPE" action Hide("character_sheet")
     key "K_TAB" action Hide("character_sheet")
+
+
+## A single trait row: name, dot rating, and any active temporary modifier.
+## Base pips are gold; buffed pips green, penalised pips red — so the base and
+## the modified rating read apart at a glance. A numeric annotation ("+4 = 7")
+## spells out the modifier and effective total, which also covers buffs that
+## push a trait past its normal maximum (Crinos, Apocalyptic Form, etc.).
+screen trait_row(pc, trait_name, max_val):
+    $ base_val = pc.base(trait_name)
+    $ mod_total = pc.modifier_total(trait_name)
+    $ eff_val = base_val + mod_total
+    $ lo = min(base_val, eff_val)
+    $ hi = max(base_val, eff_val)
+    $ dot_count = max(max_val, hi)
+    hbox:
+        spacing 10
+        text trait_name size 14 color "#e0e0e0" min_width 200
+        hbox:
+            spacing 3
+            yalign 0.5
+            for d in range(dot_count):
+                if d < lo:
+                    text "●" size 14 color "#b8860b"
+                elif mod_total > 0 and d < hi:
+                    text "●" size 14 color "#6a9e6a"
+                elif mod_total < 0 and d < hi:
+                    text "●" size 14 color "#9e5a5a"
+                else:
+                    text "○" size 14 color "#444444"
+        if mod_total != 0:
+            $ mod_color = "#6a9e6a" if mod_total > 0 else "#9e5a5a"
+            $ mod_sign = "+" if mod_total > 0 else "−"
+            $ mod_label = "{}{} = {}".format(mod_sign, abs(mod_total), eff_val)
+            text "[mod_label]" size 13 color mod_color yalign 0.5

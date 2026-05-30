@@ -140,6 +140,52 @@ merits_flaws: []
         assert char.get("Forces") == 3
 
 
+    def test_temporary_modifier_buff_affects_gates_and_saves(self, tmp_path):
+        import pickle
+
+        char_yaml = tmp_path / "shifter.yaml"
+        char_yaml.write_text("""
+schema: mage
+template: default_mage
+character_type: pc
+identity:
+  name: "Buffed Mage"
+traits:
+  attributes:
+    Strength: 2
+    Stamina: 2
+  arete:
+    Arete: 3
+resources: {}
+merits_flaws: []
+""")
+        char = wod_core.load_character(str(char_yaml))
+        wod_core.set_active(char)
+
+        # Before any buff, a high threshold fails.
+        assert wod_core.gate("Strength", ">=", 5) is False
+
+        # A form grants bonuses from a single source.
+        char.apply_modifier("Strength", 4, "Crinos")
+        char.apply_modifier("Stamina", 1, "Crinos")
+
+        # Module-level gates (and the bracket shorthand that compiles to them)
+        # now see the effective value.
+        assert wod_core.gate("Strength", ">=", 5) is True
+        assert char.base("Strength") == 2  # permanent value untouched
+
+        # Shifting back removes the whole source.
+        char.remove_modifier("Crinos")
+        assert wod_core.gate("Strength", ">=", 5) is False
+        assert char.get("Stamina") == 2
+
+        # Modifiers are runtime-only: a save/load drops them.
+        char.apply_modifier("Strength", 4, "Crinos")
+        restored = pickle.loads(pickle.dumps(char))
+        assert restored.modifiers == {}
+        assert restored.get("Strength") == 2
+
+
 class TestSyntaxIntegration:
     """Test syntax compiler with realistic Ren'Py-like script fragments."""
 

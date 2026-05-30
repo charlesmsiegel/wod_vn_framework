@@ -241,6 +241,128 @@ class TestCharacterGate:
             char.gate("Strength", "~", 3)
 
 
+class TestTraitModifiers:
+    """Test temporary stat modifiers (form-shifting, buffs) — issue #33."""
+
+    def test_apply_modifier_changes_get(self, mage_schema_data):
+        schema = Schema(mage_schema_data)
+        char = Character(schema, traits={"Strength": 3})
+        char.apply_modifier("Strength", 4, "Crinos")
+        assert char.get("Strength") == 7
+
+    def test_base_ignores_modifiers(self, mage_schema_data):
+        schema = Schema(mage_schema_data)
+        char = Character(schema, traits={"Strength": 3})
+        char.apply_modifier("Strength", 4, "Crinos")
+        assert char.base("Strength") == 3
+        assert char.get("Strength") == 7
+
+    def test_modifiers_from_different_sources_stack(self, mage_schema_data):
+        schema = Schema(mage_schema_data)
+        char = Character(schema, traits={"Strength": 2})
+        char.apply_modifier("Strength", 4, "Crinos")
+        char.apply_modifier("Strength", 1, "Rage Buff")
+        assert char.get("Strength") == 7
+        assert char.modifier_total("Strength") == 5
+
+    def test_repeated_modifier_from_same_source_accumulates(self, mage_schema_data):
+        schema = Schema(mage_schema_data)
+        char = Character(schema, traits={"Strength": 2})
+        char.apply_modifier("Strength", 1, "Buff")
+        char.apply_modifier("Strength", 2, "Buff")
+        assert char.get("Strength") == 5
+
+    def test_one_source_modifies_multiple_traits(self, mage_schema_data):
+        schema = Schema(mage_schema_data)
+        char = Character(schema, traits={"Strength": 3, "Stamina": 2})
+        char.apply_modifier("Strength", 4, "Crinos")
+        char.apply_modifier("Stamina", 1, "Crinos")
+        assert char.get("Strength") == 7
+        assert char.get("Stamina") == 3
+
+    def test_remove_modifier_by_source(self, mage_schema_data):
+        schema = Schema(mage_schema_data)
+        char = Character(schema, traits={"Strength": 3, "Stamina": 2})
+        char.apply_modifier("Strength", 4, "Crinos")
+        char.apply_modifier("Stamina", 1, "Crinos")
+        char.remove_modifier("Crinos")
+        assert char.get("Strength") == 3
+        assert char.get("Stamina") == 2
+
+    def test_remove_one_source_leaves_others(self, mage_schema_data):
+        schema = Schema(mage_schema_data)
+        char = Character(schema, traits={"Strength": 2})
+        char.apply_modifier("Strength", 4, "Crinos")
+        char.apply_modifier("Strength", 1, "Rage Buff")
+        char.remove_modifier("Crinos")
+        assert char.get("Strength") == 3
+
+    def test_remove_unknown_source_is_noop(self, mage_schema_data):
+        schema = Schema(mage_schema_data)
+        char = Character(schema, traits={"Strength": 3})
+        char.remove_modifier("Nonexistent")  # should not raise
+        assert char.get("Strength") == 3
+
+    def test_clear_modifiers(self, mage_schema_data):
+        schema = Schema(mage_schema_data)
+        char = Character(schema, traits={"Strength": 2})
+        char.apply_modifier("Strength", 4, "Crinos")
+        char.apply_modifier("Strength", 1, "Rage Buff")
+        char.clear_modifiers()
+        assert char.get("Strength") == 2
+        assert char.modifiers == {}
+
+    def test_modifier_can_exceed_normal_range(self, mage_schema_data):
+        # Supernatural forms intentionally push traits past the human maximum.
+        schema = Schema(mage_schema_data)
+        char = Character(schema, traits={"Strength": 5})
+        char.apply_modifier("Strength", 4, "Crinos")
+        assert char.get("Strength") == 9
+
+    def test_negative_modifier_penalty(self, mage_schema_data):
+        schema = Schema(mage_schema_data)
+        char = Character(schema, traits={"Strength": 4})
+        char.apply_modifier("Strength", -2, "Wounded")
+        assert char.get("Strength") == 2
+
+    def test_modifier_total_zero_when_unmodified(self, mage_schema_data):
+        schema = Schema(mage_schema_data)
+        char = Character(schema, traits={"Strength": 3})
+        assert char.modifier_total("Strength") == 0
+
+    def test_apply_modifier_unknown_trait_raises(self, mage_schema_data):
+        schema = Schema(mage_schema_data)
+        char = Character(schema)
+        with pytest.raises(KeyError, match="Unknown trait"):
+            char.apply_modifier("Nonexistent", 2, "Buff")
+
+    def test_gate_uses_modified_value(self, mage_schema_data):
+        schema = Schema(mage_schema_data)
+        char = Character(schema, traits={"Strength": 3})
+        assert char.gate("Strength", ">=", 5) is False
+        char.apply_modifier("Strength", 4, "Crinos")
+        assert char.gate("Strength", ">=", 5) is True
+        assert char.gate("Strength", ">=", 7) is True
+
+    def test_advance_uses_base_not_modified(self, mage_schema_data):
+        # Advancing a buffed trait must increment the base, not base+modifier.
+        schema = Schema(mage_schema_data)
+        char = Character(schema, traits={"Strength": 3})
+        char.apply_modifier("Strength", 1, "Buff")
+        char.advance("Strength")
+        assert char.base("Strength") == 4
+        assert char.get("Strength") == 5
+
+    def test_constraint_uses_base_not_modified(self, mage_schema_data):
+        # A temporary Arete buff must not permit permanently raising a Sphere.
+        schema = Schema(mage_schema_data)
+        char = Character(schema, traits={"Arete": 2, "Forces": 2})
+        char.apply_modifier("Arete", 3, "Time Magic")
+        assert char.get("Arete") == 5
+        with pytest.raises(ValueError, match="cannot exceed Arete"):
+            char.set("Forces", 3)
+
+
 class TestCategoryDefGroups:
     """Test that CategoryDef preserves group structure."""
 
@@ -307,3 +429,25 @@ class TestCharacterSerialization:
         assert restored.schema is not None
         assert restored.schema.has_trait("Strength")
         assert restored.gate("Strength", ">=", 3) is True
+
+    def test_modifiers_excluded_from_state(self, mage_schema_data):
+        schema = Schema(mage_schema_data)
+        char = Character(schema, traits={"Strength": 3})
+        char.apply_modifier("Strength", 4, "Crinos")
+
+        state = char.__getstate__()
+        assert "modifiers" not in state
+
+    def test_modifiers_do_not_persist_in_saves(self, mage_schema_data):
+        # Modifiers are runtime-only; a loaded character has its base values.
+        schema = Schema(mage_schema_data)
+        char = Character(schema, traits={"Strength": 3})
+        char.apply_modifier("Strength", 4, "Crinos")
+        assert char.get("Strength") == 7
+
+        restored = pickle.loads(pickle.dumps(char))
+        assert restored.modifiers == {}
+        assert restored.get("Strength") == 3
+        # Game logic can reapply the modifier after load.
+        restored.apply_modifier("Strength", 4, "Crinos")
+        assert restored.get("Strength") == 7

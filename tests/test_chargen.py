@@ -334,11 +334,14 @@ class TestTraditionTemplates:
 
     def test_all_nine_traditions_present(self, mage_splat):
         names = {t["name"] for t in mage_splat.chargen_config["traditions"]}
-        assert names == {
+        # The nine core Traditions must always be offered. Quasi-Traditions
+        # (Hollow Ones) and unaffiliated mages (Orphans) may also appear, so
+        # this is a subset check rather than an exact-equality one.
+        assert {
             "Akashic Brotherhood", "Celestial Chorus", "Cult of Ecstasy",
             "Dreamspeakers", "Euthanatos", "Order of Hermes",
             "Sons of Ether", "Verbena", "Virtual Adepts",
-        }
+        } <= names
 
     def test_every_tradition_has_a_template(self, mage_splat):
         for trad in mage_splat.chargen_config["traditions"]:
@@ -366,12 +369,19 @@ class TestTraditionTemplates:
         # Resources are attached and usable.
         assert char.resources is not None
         assert char.resources.has_resource("willpower")
-        # The template leads with its Tradition's affinity Sphere.
-        assert char.get(tradition["affinity_sphere"]) >= 1
+        spheres = ("Correspondence", "Entropy", "Forces", "Life", "Matter",
+                   "Mind", "Prime", "Spirit", "Time")
+        affinity = tradition["affinity_sphere"]
+        if affinity in spheres:
+            # The template leads with its Tradition's affinity Sphere.
+            assert char.get(affinity) >= 1
+        else:
+            # Orphans/Disparates have no fixed affinity ("Any"); just require
+            # that the template invests in at least one Sphere.
+            assert any(char.get(s) >= 1 for s in spheres)
         # No Sphere exceeds Arete (engine enforces this on build; assert anyway).
         arete = char.get("Arete")
-        for sphere in ("Correspondence", "Entropy", "Forces", "Life", "Matter",
-                       "Mind", "Prime", "Spirit", "Time"):
+        for sphere in spheres:
             assert char.get(sphere) <= arete
 
     @pytest.mark.parametrize("tradition,template", _TEMPLATE_PARAMS, ids=_TEMPLATE_IDS)

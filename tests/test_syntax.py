@@ -78,8 +78,23 @@ class TestTransformLine:
 
     def test_locked_annotation_preserved(self):
         line = '    "Rewrite the ward" [Forces >= 3] (locked="You lack the knowledge..."):'
+        expected = (
+            '    "Rewrite the ward" (locked="You lack the knowledge...") '
+            'if wod_core.gate("Forces", ">=", 3):'
+        )
         result = transform_line(line)
-        assert 'wod_core.gate("Forces", ">=", 3)' in result
+        assert result == expected
+        # The annotation must be repositioned ahead of the generated `if` so the
+        # output is valid Ren'Py (menu-choice arguments precede the condition).
+        assert result.index("(locked=") < result.index(" if ")
+
+    def test_locked_annotation_multiple_conditions(self):
+        line = '    "Rewrite the ward" [Prime >= 3, Forces >= 2] (locked="Not yet."):'
+        expected = (
+            '    "Rewrite the ward" (locked="Not yet.") '
+            'if wod_core.gate("Prime", ">=", 3) and wod_core.gate("Forces", ">=", 2):'
+        )
+        assert transform_line(line) == expected
 
     def test_mixed_conditions_and_boolean(self):
         line = '    "Astral travel" [Mind >= 4, Avatar Companion]:'

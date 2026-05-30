@@ -467,6 +467,14 @@ For authors who prefer a more concise syntax, the framework includes a pre-proce
 - `[!Flaw Name]` (leading `!`) becomes `not wod_core.has("Flaw Name")`.
 - `[via method]` becomes `wod_core.can_use("method")` -- paradigm/Focus gating (see [Paradigm & Focus Gating](#paradigm--focus-gating-optional)). `[!via method]` negates it.
 - Multiple conditions separated by commas are joined with `and`.
+- A trailing `(locked="hint")` annotation marks a gated-off choice to be shown greyed-out with the hint (see [Showing Locked Choices](#showing-locked-choices)). The annotation is kept verbatim and moved ahead of the generated `if`:
+
+  ```renpy
+  ## Before:
+  "Rewrite the ward" [Prime >= 3, Forces >= 2] (locked="You lack the knowledge..."):
+  ## After:
+  "Rewrite the ward" (locked="You lack the knowledge...") if wod_core.gate("Prime", ">=", 3) and wod_core.gate("Forces", ">=", 2):
+  ```
 
 ### Automatic compilation (no build step)
 

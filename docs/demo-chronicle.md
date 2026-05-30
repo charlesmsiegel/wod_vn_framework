@@ -48,7 +48,7 @@ The ending is determined by the player's choices and resource state.
 |-------|-------|--------------|------------------------------|
 | 1 | **The Summons** | Soraya learns Vance is missing and decides how to begin. | `load_character`, `set_active`, `show_hud`, `show_toast`, identity interpolation, **Flaw** check (`has("Nightmares")`), gates on **Background** (`Mentor`) and **Ability** (`Investigation`), a hidden premium gate (`Correspondence >= 3`). |
 | 2 | **The Sanctum** | Searching Vance's library for what he did and why. | **Spirit** gate reveals the familiar Corvin; investigation menu gated on `Prime`/`Occult`/`Investigation`/`Awareness`; **Quintessence spend** + small **Paradox gain** (the Wheel); one-time **`advance("Cosmology")`** with a toast. |
-| 3 | **The Breach** | The Node tears open; Soraya must stabilise it. | **Merit** check (`has("Natural Channel")`) to **gain Quintessence** from the Node; stabilise menu gated on `Forces`/`Spirit` (+ hidden `Correspondence`); **spend** Quintessence/Willpower/Health; **Paradox backlash** branch; spend-failure fallback. |
+| 3 | **The Breach** | The Node tears open; Soraya must stabilise it. | **Resonance** gate (`Static >= 2`); **Merit** check (`has("Natural Channel")`) to **gain Quintessence** from the Node; stabilise menu gated on `Forces`/`Spirit` (+ hidden `Correspondence`); **spend** Quintessence/Willpower/Health; **Paradox backlash** branch; spend-failure fallback. |
 | 4 | **The Vigil** *(climax)* | Confront the Paradox-touched Vance and choose his fate. | Compound gates (`Spirit >= 2 and Prime >= 2`), `Prime`, `Mentor` bond, hidden `Forces >= 4`; Willpower/Quintessence spends with insufficient-resource fallbacks; sets the ending flag `hv_mentor_fate`. |
 | 5 | **Aftermath** | Resolution keyed to choices, plus a final-state readout. | Four-way ending branch (`reconciled`/`released`/`anchored`/`fled`), reads back final resources & advanced traits, `hide_hud`. |
 
@@ -61,7 +61,7 @@ Soraya's sheet (`demo/soraya.yaml`) is tuned so the **main path** of every scene
 is reachable, while two **premium gates** stay deliberately out of reach to show
 how gating *hides* choices rather than failing them:
 
-- Reachable: `Forces 3`, `Prime 2`, `Spirit 2`, `Awareness 3`, `Occult 3`, `Investigation 3`, `Mentor 3`, `Avatar 3`, `Node 2`.
+- Reachable: `Forces 3`, `Prime 2`, `Spirit 2`, `Static 2` (Resonance), `Awareness 3`, `Occult 3`, `Investigation 3`, `Mentor 3`, `Avatar 3`, `Node 2`.
 - Hidden for Soraya: `Correspondence >= 3` (she has 1) and `Forces >= 4` (she has 3).
 
 Swap in a character with higher `Correspondence` or `Forces` and new options

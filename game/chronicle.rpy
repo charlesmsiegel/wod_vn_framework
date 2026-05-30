@@ -192,6 +192,10 @@ label hv_scene3:
     else:
         soraya "So {i}this{/i} is what he hid down here. The vigil's failing, and the Node is tearing open."
 
+    # Resonance beat: a Static mage reads the breach's churn against her own grain.
+    if pc.gate("Static", ">=", 2):
+        "Your own Resonance is Static — order, permanence, the world keeping its shape. Against the breach's churn it is the one fixed point in the room, and you set your back to it."
+
     # Merit beat: Natural Channel lets her draw on the Node before acting.
     if pc.has("Natural Channel"):
         "As a Natural Channel, you feel the Node's Quintessence lean toward you, eager, even now."
@@ -437,15 +441,16 @@ label hv_scene5:
     $ hp_max = pc.resources.pools["health"].max
     $ cosmo = pc.get("Cosmology")
     $ arete = pc.get("Arete")
+    $ resonance = pc.identity.get("resonance", "—")
 
     "Final state of [final_name], [final_trad]:"
     "  Quintessence: [q_now]   Paradox: [p_now]"
     "  Willpower: [wp_now]/[wp_max]   Health: [hp_now]/[hp_max]"
-    "  Cosmology: [cosmo]   Arete: [arete]"
+    "  Cosmology: [cosmo]   Arete: [arete]   Resonance: [resonance]"
 
     "This chronicle exercised the WoD VN Framework:"
     "  - YAML character loading, set_active, and the persistent resource HUD"
-    "  - Stat-gated choices across Spheres, Abilities, Backgrounds, and resources"
+    "  - Stat-gated choices across Spheres, Abilities, Backgrounds, Resonance, and resources"
     "  - Hidden 'premium' gates (Correspondence and Forces) the protagonist can't reach"
     "  - Merit and Flaw checks (Natural Channel, Nightmares)"
     "  - Quintessence / Willpower / Health spending and the Quintessence–Paradox Wheel"

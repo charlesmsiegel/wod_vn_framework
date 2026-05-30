@@ -15,6 +15,7 @@ identity:
   name: "Soraya Mir"
   tradition: "Order of Hermes"
   essence: "Pattern"
+  resonance: "Static"
   nature: "Visionary"
   demeanor: "Architect"
   concept: "Ley-line cartographer and reluctant heir to a vanished mentor"
@@ -55,6 +56,8 @@ traits:
     Node: 2
     Sanctum: 1
     Wonder: 1
+  resonance:
+    Static: 2
 
 resources:
   quintessence: 8

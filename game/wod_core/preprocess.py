@@ -83,6 +83,19 @@ def preprocess_directory(
     return changed
 
 
+# Environment variable that disables the init-time pass. It is read before any
+# script runs, so — unlike ``config.auto_preprocess`` — it always takes effect
+# regardless of file load order. Set it to a falsey value (e.g. ``0``) to skip.
+ENV_OPT_OUT = "WOD_AUTO_PREPROCESS"
+_FALSEY = frozenset({"0", "false", "no", "off"})
+
+
+def _disabled_by_env() -> bool:
+    """True if ``WOD_AUTO_PREPROCESS`` is set to a falsey value."""
+    val = os.environ.get(ENV_OPT_OUT)
+    return val is not None and val.strip().lower() in _FALSEY
+
+
 def run_init_preprocess(verbose: bool = True) -> list[str]:
     """Compile bracket shorthand at Ren'Py init time.
 
@@ -91,12 +104,18 @@ def run_init_preprocess(verbose: bool = True) -> list[str]:
     place so the bracket shorthand is valid native Ren'Py by the time those
     files are parsed in the same run.
 
-    The pass is a no-op unless **both** conditions hold:
+    The pass is a no-op when any of these hold:
 
-    * Ren'Py is in developer mode. Distributed builds ship precompiled
-      ``.rpyc`` and have no shorthand to transform, so there is nothing to do
-      (and the source tree may be read-only).
-    * ``wod_core.config.auto_preprocess`` is left enabled (the default).
+    * Ren'Py is not in developer mode. Distributed builds ship precompiled
+      ``.rpyc`` and have no shorthand to transform (and the tree may be
+      read-only).
+    * The ``WOD_AUTO_PREPROCESS`` environment variable is set to a falsey value.
+      This is the ordering-independent opt-out (read before any script runs),
+      and the right one for CI / ``renpy lint`` / CLI-only workflows.
+    * ``wod_core.config.auto_preprocess`` is disabled. Because this function
+      runs in ``python early``, that flag only takes effect when set early
+      enough — i.e. from a ``python early`` block in a file that sorts before
+      ``00_wod_preprocess.rpy``; setting it in ``init python`` is too late.
 
     Returns the list of files that were changed (empty when skipped).
     """
@@ -104,6 +123,10 @@ def run_init_preprocess(verbose: bool = True) -> list[str]:
 
     # Only rewrite source while developing; shipped builds are precompiled.
     if not renpy.config.developer:
+        return []
+
+    # Env var wins and is honored regardless of load order.
+    if _disabled_by_env():
         return []
 
     import wod_core
@@ -114,9 +137,13 @@ def run_init_preprocess(verbose: bool = True) -> list[str]:
     gamedir = renpy.config.gamedir
     try:
         changed = preprocess_directory(gamedir)
-    except OSError as e:
+    except Exception as e:
+        # This runs in `python early` on every launch and during `renpy lint`,
+        # so it must never crash the game. Degrade to a warning; the author can
+        # still compile manually with the CLI. (OSError = unreadable/unwritable
+        # file; UnicodeDecodeError = a non-UTF-8 .rpy; etc.)
         if verbose:
-            print(f"WoD: could not compile bracket shorthand ({e}).")
+            print(f"WoD: could not compile bracket shorthand ({e!r}).")
         return []
 
     if verbose:

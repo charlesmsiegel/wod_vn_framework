@@ -459,9 +459,15 @@ Notes and limits:
 - **It edits your `.rpy` in place.** The shorthand is replaced by the equivalent `if` expression, exactly as the CLI does. Keep your project under version control so you can review the diff. (Add the brackets back any time you prefer the shorthand; they'll recompile on the next launch.)
 - **Developer mode only.** Distributed builds ship precompiled, so the pass does nothing there.
 - **File ordering.** Files that sort *before* `00_wod_preprocess.rpy` (e.g. a name beginning with `000`) are parsed before the early block runs and won't be auto-compiled — keep the framework's `00_` prefix ahead of your own files, or compile those with the CLI.
-- **Opt out** by disabling it in any `init python` block:
+- **Opt out** with the `WOD_AUTO_PREPROCESS` environment variable — set it to `0` when launching. It's read before any script runs, so it always takes effect regardless of file order, and it's the right switch for CI, `renpy lint`, or a CLI-only workflow:
+  ```bash
+  WOD_AUTO_PREPROCESS=0 renpy.sh game/
+  ```
+  The `wod_core.config.auto_preprocess` flag also disables the pass, but since it runs in `python early` you must set the flag *that* early — in a `python early` block in a file that sorts before `00_wod_preprocess.rpy` (e.g. `000_config.rpy`). Setting it in `init python` runs too late to have any effect:
   ```renpy
-  init python:
+  ## game/000_config.rpy — sorts before the preprocessor
+  python early:
+      import wod_core
       wod_core.config.auto_preprocess = False
   ```
 

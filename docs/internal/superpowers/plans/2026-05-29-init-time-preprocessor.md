@@ -64,14 +64,22 @@ are no-ops for it.
 | `wod_core/__main__.py` | Refactored to share `preprocess` and to accept directories. |
 | `wod_core/__init__.py` | `config.auto_preprocess` flag (default `True`). |
 
-`run_init_preprocess()` is a no-op unless **both** hold:
+`run_init_preprocess()` is a no-op when any of these hold:
 
-- `renpy.config.developer` is true. Distributed builds ship precompiled `.rpyc`,
+- `renpy.config.developer` is false. Distributed builds ship precompiled `.rpyc`,
   have no shorthand to compile, and may sit on a read-only tree.
-- `wod_core.config.auto_preprocess` is left enabled.
+- `WOD_AUTO_PREPROCESS` is set to a falsey value. This is the **ordering-independent
+  opt-out**: it's an environment variable, read before any script runs, so it
+  always takes effect — and it's the right switch for CI / `renpy lint` / CLI-only
+  workflows.
+- `wod_core.config.auto_preprocess` is disabled. **Caveat:** because the pass runs
+  in `python early`, this flag only takes effect when set that early (a `python
+  early` block in a file sorting before `00_wod_preprocess.rpy`); setting it in
+  `init python` is too late, since `init` runs after `early`. The env var exists
+  precisely so authors don't have to reason about that ordering.
 
 `renpy` is imported *inside* the function so the module stays importable (and
-testable) outside Ren'Py; tests stub a fake `renpy` module to exercise the gate.
+testable) outside Ren'Py; tests stub a fake `renpy` module to exercise the gates.
 
 ## Known limitations (documented for authors)
 

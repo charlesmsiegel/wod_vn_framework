@@ -177,3 +177,37 @@ class TestRunInitPreprocess:
 
         assert changed == []
         assert (tmp_path / "script.rpy").read_text() == BRACKET_SRC  # untouched
+
+    @pytest.mark.parametrize("value", ["0", "false", "no", "off", " OFF "])
+    def test_env_var_disables_regardless_of_flag(self, monkeypatch, tmp_path, value):
+        # The env var opt-out must work even with the config flag at its default
+        # True — that's the whole point: it doesn't depend on load order.
+        self._install_fake_renpy(monkeypatch, tmp_path, developer=True)
+        monkeypatch.setenv(preprocess.ENV_OPT_OUT, value)
+        (tmp_path / "script.rpy").write_text(BRACKET_SRC)
+
+        changed = preprocess.run_init_preprocess(verbose=False)
+
+        assert changed == []
+        assert (tmp_path / "script.rpy").read_text() == BRACKET_SRC  # untouched
+
+    @pytest.mark.parametrize("value", ["1", "true", "yes", ""])
+    def test_env_var_non_falsey_does_not_disable(self, monkeypatch, tmp_path, value):
+        self._install_fake_renpy(monkeypatch, tmp_path, developer=True)
+        monkeypatch.setenv(preprocess.ENV_OPT_OUT, value)
+        (tmp_path / "script.rpy").write_text(BRACKET_SRC)
+
+        changed = preprocess.run_init_preprocess(verbose=False)
+
+        assert len(changed) == 1
+        assert 'wod_core.gate("Forces", ">=", 3)' in (tmp_path / "script.rpy").read_text()
+
+    def test_does_not_raise_on_bad_file(self, monkeypatch, tmp_path):
+        # Runs in python early on every launch / `renpy lint`, so a non-UTF-8
+        # .rpy must degrade to a no-op rather than crash the load.
+        self._install_fake_renpy(monkeypatch, tmp_path, developer=True)
+        (tmp_path / "bad.rpy").write_bytes(b"\xff\xfe menu: not utf-8")
+
+        changed = preprocess.run_init_preprocess(verbose=False)
+
+        assert changed == []  # swallowed, no exception raised

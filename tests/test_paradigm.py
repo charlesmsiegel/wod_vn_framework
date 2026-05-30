@@ -286,12 +286,23 @@ class TestRealMageParadigm:
         wod_core.init(GAME_DIR)
         wod_core.load_splat("mage")
 
+    # The nine core Traditions each channel a fixed paradigm. Hollow Ones and
+    # Orphans are deliberately unaffiliated — they pick their own focus — so
+    # they carry no fixed paradigm entry and are excluded here.
+    _CORE_TRADITIONS = frozenset({
+        "akashic_brotherhood", "celestial_chorus", "cult_of_ecstasy",
+        "dreamspeakers", "euthanatos", "order_of_hermes",
+        "sons_of_ether", "verbena", "virtual_adepts",
+    })
+
     def test_schema_has_paradigm(self):
         schema = wod_core.get_loader().loaded_splats["mage"].schema
         assert schema.paradigm is not None
-        # Every Tradition in chargen.yaml has a paradigm entry.
+        # Every core Tradition in chargen.yaml has a paradigm entry.
         chargen = wod_core.get_loader().loaded_splats["mage"].chargen_config
-        for trad in chargen["traditions"]:
+        core = [t for t in chargen["traditions"] if t["id"] in self._CORE_TRADITIONS]
+        assert len(core) == 9, "expected the nine core Traditions in chargen.yaml"
+        for trad in core:
             assert schema.paradigm.methods_for(trad["id"]), trad["id"]
 
     def test_demo_virtual_adept(self):

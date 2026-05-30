@@ -390,6 +390,7 @@ def _build_from_allocation(state: ChargenState) -> Character:
         traits=flat_traits,
         merits_flaws=merits_flaws,
         identity=identity,
+        splat_id=state.splat_id,
     )
 
     # Attach resources
@@ -436,6 +437,7 @@ def _build_from_template(state: ChargenState) -> Character:
         traits=flat_traits,
         merits_flaws=char_data.get("merits_flaws", []),
         identity=file_identity,
+        splat_id=state.splat_id,
     )
 
     # Attach resources

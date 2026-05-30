@@ -1,3 +1,8 @@
+# Schema revision. Bump this whenever you change traits or ranges so that
+# characters saved under the old schema are migrated on load. See the Author
+# Guide section "Save Migration" and wod_core/migrations.py.
+version: "1.0"
+
 trait_categories:
   attributes:
     display_name: "Attributes"

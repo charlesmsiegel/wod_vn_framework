@@ -631,9 +631,9 @@ Next scene
 
 - All runtime state (trait values, resource pools, merits/flaws, identity) lives in Ren'Py-managed variables.
 - Schema and resource definitions stay in YAML, reloaded on game start.
-- Saving: Ren'Py snapshots the character objects automatically.
-- Loading: Ren'Py restores them, framework re-validates against current schema.
-- Save migration across schema changes (renamed traits, changed ranges) is out of scope for v1. Authors should treat released schema as stable.
+- Saving: Ren'Py snapshots the character objects automatically. Each character records its splat and the schema `version` it was written under.
+- Loading: Ren'Py restores them; if the saved schema version differs from the current one, the framework migrates the character onto the current schema (see below).
+- Save migration across schema changes (renamed traits, added/removed traits, changed ranges) is implemented in `wod_core/migrations.py` (issue #20). Bumping the schema `version` triggers migration on load: new traits default in, removed traits drop, out-of-range values clamp, and authors can register version-to-version steps to preserve renamed-trait values. Migration is graceful by default (warn + reconcile, surfaced via a toast) with an opt-in `strict` mode that raises a clear `MigrationError`.
 
 ### Multi-PC Flow (Opt-in)
 

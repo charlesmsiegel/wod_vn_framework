@@ -987,6 +987,102 @@ overrides:
       range: [0, 12]
 ```
 
+### Schema Versioning & Save Migration
+
+If you release an update that changes your schema -- renaming a trait, adding or
+removing one, or narrowing a range -- characters in players' existing save files
+were written against the *old* schema. The framework migrates them onto the new
+schema automatically when a save is loaded, so old saves keep working.
+
+#### Bump the version when you change the schema
+
+Migration is triggered by the `version` field in `schema.yaml` (it falls back to
+the `version` in `manifest.yaml` if the schema file omits one):
+
+```yaml
+# game/splats/mage/schema.yaml
+version: "1.1"   # was "1.0" -- bump this whenever you change traits or ranges
+trait_categories:
+  ...
+```
+
+Each saved character records the schema version it was written under. On load,
+if that version differs from the current one, the character is migrated. **If you
+do not bump the version, no migration runs** -- this is deliberate, so that
+author-level overrides and template-extended characters (which share the base
+version) keep their custom schemas.
+
+> **Template-extended characters and version bumps.** A character loaded via
+> `load_character_from_template` with overrides (e.g. an archmage with a wider
+> Sphere range) carries its own extended schema. As long as you do not bump the
+> base version, it keeps that schema untouched. When you *do* bump the version,
+> it is reconciled onto the canonical schema like any other save -- override-only
+> traits are dropped and wider ranges are clamped to the canonical range (the
+> changes are reported via the load toast and log). If you need such a character
+> to retain its extensions across a version bump, reapply the overrides after
+> load, or fold them into the base schema.
+
+#### Automatic reconciliation
+
+Most changes need no extra code. When the version changes, the framework
+reconciles every saved character against the new schema:
+
+| Change | What happens on load |
+|--------|----------------------|
+| **Trait added** | Set to its schema default. |
+| **Trait removed** | Dropped from the character. |
+| **Range narrowed** | Out-of-range values are clamped into the new range. |
+| **Range widened** | Values are unchanged. |
+| **Constraint left violated** | If clamping a trait leaves an inter-trait constraint broken (e.g. a Sphere now exceeds a lowered Arete), the dependent trait is lowered until the constraint holds. |
+
+This is graceful by default: the save loads, changes are logged, and a brief
+toast tells the player their save was updated.
+
+#### Migration steps for renames
+
+Reconciliation cannot know that a *renamed* trait should keep its value -- it
+looks like one trait removed and another added. Register a migration step to
+carry the value across. A step receives a mutable `state` dict and runs when a
+save crosses from `from_version` to `to_version`:
+
+```renpy
+init python:
+    @wod_core.migration("mage", "1.0", "1.1")
+    def rename_correspondence(state):
+        # Move the old value to the new key; reconciliation handles the rest.
+        if "Correspondence" in state["traits"]:
+            state["traits"]["Data"] = state["traits"].pop("Correspondence")
+```
+
+The `state` dict exposes `traits` (`{name: value}`), `merits_flaws`, `identity`,
+and `resources` (`{pool: current_value}` for existing pools). Mutate it in place.
+Steps chain by version: a `1.0 -> 1.1` step followed by a `1.1 -> 2.0` step
+migrates a `1.0` save all the way to `2.0`, applying any in-between
+reconciliation for free. (Renaming a resource *pool* is not handled
+automatically; adjust values in `state["resources"]` or rebuild the pool in a
+step if you need that.)
+
+Equivalent non-decorator form:
+
+```renpy
+init python:
+    wod_core.register_migration("mage", "1.0", "1.1", rename_correspondence)
+```
+
+#### Strict mode
+
+By default migration proceeds and warns. To instead fail loudly with a clear
+message whenever a migration would lose or clamp data (useful during
+development, so you notice missing migration steps):
+
+```renpy
+init python:
+    wod_core.migrations.strict = True
+```
+
+In strict mode a problematic load raises `wod_core.MigrationError` describing
+exactly what could not be migrated, rather than silently reconciling.
+
 ---
 
 ## 12. Testing Your Game

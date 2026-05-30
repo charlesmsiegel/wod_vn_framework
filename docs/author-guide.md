@@ -323,6 +323,32 @@ menu:
 
 Because Resonance lives in `schema.yaml`, the bracket shorthand validates the type names just like any other trait: `[Static >= 2]` compiles to `wod_core.gate("Static", ">=", 2)`. A beginning mage created through chargen picks one type and starts with a single dot; you can raise it with `pc.advance("Dynamic")` during the story. See [Section 10](#10-data-files) for the `resonance` category definition.
 
+### Boolean Traits (Gifts, Edges, Binary Powers)
+
+Some game lines have abilities you either have or you don't -- Werewolf Gifts, Hunter Edges, or the binary powers some Disciplines grant. These are **boolean traits**: a trait category declared with `type: boolean` in the splat schema (see [Section 10](#10-data-files)). They are stored as `0` (don't have it) or `1` (have it), and work with both `has()` and `gate()`:
+
+```renpy
+## has() is True when the character owns the Gift
+if pc.has("Sense Wyrm"):
+    "The stench of corruption fills your nostrils."
+
+## gate() works too -- 1 means owned, 0 means not
+if pc.gate("Sense Wyrm", ">=", 1):
+    "You focus, reaching for the Gift."
+```
+
+Both forms are equivalent for boolean traits. Use `has()` for the cleanest reading; use `gate()` when a uniform comparison is convenient (or with the bracket shorthand). In bracket shorthand:
+
+```renpy
+"Invoke the Gift" [Sense Wyrm]:        ## -> has("Sense Wyrm")
+    jump invoke
+
+"Invoke the Gift" [Sense Wyrm >= 1]:   ## -> gate("Sense Wyrm", ">=", 1)
+    jump invoke
+```
+
+Dot-rated traits (Attributes, Abilities, Spheres) are **not** matched by `has()` -- use `gate()` for those. `has()` is reserved for the things you either have or you don't: merits, flaws, and boolean traits.
+
 ### Module-Level Gating
 
 If you have called `wod_core.set_active(pc)`, you can use module-level shortcuts:
@@ -664,6 +690,31 @@ traditions:
         file: templates/taft_wonder_smith.yaml
 ```
 
+### Picking Boolean Traits (Gifts, Edges)
+
+If your splat defines a [boolean trait category](#boolean-trait-categories) (Gifts, Edges, etc.), you can let players choose from it during chargen with the built-in **`boolean_pick`** step.
+
+Two pieces wire it up:
+
+1. Add a step **named exactly `boolean_pick`** to the mode's `steps` list.
+2. Add a `boolean_picks` list to that mode describing what to pick.
+
+```yaml
+# chargen.yaml
+modes:
+  full:
+    steps: [identity, attributes, abilities, boolean_pick, review]
+    boolean_picks:
+      - category: gifts        # a boolean category from schema.yaml
+        count: 3               # how many the player must pick
+        label: "Starting Gifts"   # optional heading (defaults to display_name)
+        prompt: "Choose 3 Gifts to begin play with."   # optional help text
+```
+
+The step shows each category's traits as a checklist. The player picks exactly `count` from each block (the **Next** button stays disabled until every block is satisfied), and the chosen traits are set to `1` on the finished character -- so `pc.has(...)` and `pc.gate(..., ">=", 1)` both return `True` for them afterward.
+
+You can list more than one block to pick from several boolean categories on the same screen (e.g., Gifts and Rites). The step works in any mode, and selections are preserved if the player navigates back.
+
 ---
 
 ## 8. HUD & Character Sheet
@@ -705,7 +756,7 @@ You do not need to write any after_load code yourself. If you need custom after_
 
 The character sheet is a full-screen overlay toggled with the **Tab** key. It displays:
 
-- All trait categories with WoD-style dot ratings.
+- All trait categories with WoD-style dot ratings (boolean categories show as checkboxes instead).
 - Tabbed navigation (configured in `manifest.yaml`).
 - Merits, flaws, and resource pools.
 
@@ -849,6 +900,7 @@ trait_constraints:
 Key concepts:
 - **`groups`** organizes traits into sub-groups (Physical/Social/Mental). Used for priority-based allocation in chargen and for display in the character sheet.
 - **`traits`** is a flat list (used when grouping is not needed, e.g., Spheres).
+- **`type`** controls how a category's traits are rated. The default, `dots`, gives the familiar WoD dot ratings. `boolean` gives on/off traits (see below).
 - **`trait_constraints`** enforce rules like "no Sphere can exceed Arete." The `max_linked` type caps all traits in `target_category` by the value of `limited_by`.
 - Trait names must be unique across all categories.
 
@@ -875,6 +927,38 @@ paradigm:
 - **`default`** (optional) supplies methods for any Tradition not explicitly listed (and for characters with no Tradition). Without it, unlisted Traditions can use no methods.
 
 The whole block is optional. Omit it and `can_use()` returns `True` for everything. The pre-processor's identifier validation also checks `[via method]` names against this registry and suggests corrections for typos.
+
+#### Boolean Trait Categories
+
+For abilities you either have or you don't -- Werewolf Gifts, Hunter Edges, binary Discipline powers -- declare a category with `type: boolean`:
+
+```yaml
+trait_categories:
+  gifts:
+    display_name: "Gifts"
+    type: boolean
+    traits:
+      - Sense Wyrm
+      - Mother's Touch
+      - Razor Claws
+      - Falling Touch
+```
+
+Boolean categories:
+- Store each trait as `0` (don't have it) or `1` (have it). The range defaults to `[0, 1]`; you don't need to specify it.
+- Are recognized by both `pc.has("Sense Wyrm")` and `pc.gate("Sense Wyrm", ">=", 1)` (see [Section 4](#4-stat-gating)).
+- Render as **checkboxes** (☑) on the character sheet instead of dots, and -- like dot traits -- only the ones the character actually has are shown.
+- Can be picked from a list during chargen via the `boolean_pick` step (see [Section 7](#7-character-creation)).
+- Survive save/load and can be added to a character file just like any other trait:
+
+  ```yaml
+  traits:
+    gifts:
+      Sense Wyrm: 1
+      Razor Claws: 1
+  ```
+
+You can also append to a boolean category with [splat overrides](#11-customization), exactly as with dot-rated categories.
 
 ### resources.yaml
 

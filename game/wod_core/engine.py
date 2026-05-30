@@ -4,12 +4,25 @@ from __future__ import annotations
 
 
 class CategoryDef:
-    """A trait category parsed from schema YAML."""
+    """A trait category parsed from schema YAML.
+
+    A category's ``type`` controls how its traits are rated and shown:
+
+    - ``"dots"`` (the default) — dot-rated traits like Attributes, Abilities,
+      and Spheres.
+    - ``"boolean"`` — on/off traits you either have or you don't, such as
+      Werewolf Gifts, Hunter Edges, or binary Discipline powers. They are
+      stored as 0/1, displayed as checkboxes, and recognized by
+      ``Character.has()`` in addition to ``gate()``. When no ``range`` is given
+      a boolean category defaults to ``[0, 1]``.
+    """
 
     def __init__(self, name: str, data: dict):
         self.name = name
         self.display_name = data.get("display_name", name)
-        self.range = tuple(data.get("range", [0, 5]))
+        self.type = data.get("type", "dots")
+        default_range = [0, 1] if self.type == "boolean" else [0, 5]
+        self.range = tuple(data.get("range", default_range))
         self.default = data.get("default", 0)
         self.trait_names: list[str] = []
         self.groups: dict[str, list[str]] | None = None
@@ -163,6 +176,21 @@ class Schema:
         cat_name = self.trait_lookup[trait_name]
         return self.categories[cat_name].default
 
+    def get_category_type(self, trait_name: str) -> str:
+        cat_name = self.trait_lookup[trait_name]
+        return self.categories[cat_name].type
+
+    def is_boolean_trait(self, trait_name: str) -> bool:
+        cat_name = self.trait_lookup.get(trait_name)
+        return cat_name is not None and self.categories[cat_name].type == "boolean"
+
+    def get_boolean_trait_names(self) -> list[str]:
+        return [
+            name
+            for name, cat_name in self.trait_lookup.items()
+            if self.categories[cat_name].type == "boolean"
+        ]
+
     def can_use(self, method: str, tradition: str | None) -> bool:
         """Whether a Tradition may cast via ``method``.
 
@@ -187,6 +215,7 @@ class Schema:
         for cat_name, cat in self.categories.items():
             cat_data: dict = {
                 "display_name": cat.display_name,
+                "type": cat.type,
                 "range": list(cat.range),
                 "default": cat.default,
             }
@@ -356,6 +385,12 @@ class Character:
         self.set(name, self.base(name) + 1)
 
     def has(self, name: str) -> bool:
+        # Boolean traits (Gifts, Edges, binary powers) read as "had" when their
+        # effective value is >= 1, so has() stays consistent with gate() when a
+        # temporary modifier grants or suppresses the trait. Dot-rated traits
+        # never satisfy has() — use gate() for those.
+        if self.schema is not None and self.schema.is_boolean_trait(name):
+            return self.get(name) >= 1
         return any(mf["name"] == name for mf in self.merits_flaws)
 
     def can_use(self, method: str) -> bool:

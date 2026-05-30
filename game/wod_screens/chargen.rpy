@@ -1251,6 +1251,17 @@ screen chargen_review(state):
                                 $ mf_name = mf.get("name", "")
                                 text "  - [mf_name] (Flaw)" size 14 color "#8b4545"
 
+                        # Boolean picks (Gifts, Edges, binary powers)
+                        $ bool_selections = state.data.get("boolean_pick", {}).get("selections", {})
+                        for cat_name, picks in bool_selections.items():
+                            if picks:
+                                null height 5
+                                $ bcat = state.schema.categories.get(cat_name)
+                                $ bcat_label = bcat.display_name if bcat is not None else cat_name
+                                text "[bcat_label]" size 20 color "#c9a96e"
+                                for trait_name in picks:
+                                    text "  \u2611 [trait_name]" size 14 color "#6a9e6a"
+
                         null height 20
 
                         # Go-back-to-step buttons
@@ -1735,3 +1746,122 @@ screen chargen_template_pick(state):
                         if has_selection:
                             $ next_result = {"action": "next", "tradition": selected_tradition_id, "template_file": selected_template_file}
                             textbutton "Next Step >>" text_size 18 text_color "#c9a96e" text_hover_color "#e0c080" action Return(next_result) xalign 0.5
+
+
+################################################################################
+## 13. BOOLEAN PICK SCREEN (Gifts, Edges, binary powers — any mode)
+################################################################################
+## Generic, config-driven step for picking on/off traits from a list. A splat
+## enables it by adding a step named `boolean_pick` to a mode and configuring
+## `boolean_picks` (see chargen.yaml docs). Each config block names a boolean
+## trait category, how many to pick, and an optional heading/prompt.
+
+screen chargen_boolean_pick(state):
+    modal True
+
+    $ picks_config = state.get_boolean_pick_config()
+    $ prev_data = state.data.get("boolean_pick", {})
+
+    default selections = {}
+    python:
+        if not selections:
+            prev_sel = prev_data.get("selections", {})
+            for block in picks_config:
+                cat_name = block.get("category", "")
+                selections[cat_name] = list(prev_sel.get(cat_name, []))
+
+    # Completion requires exactly `count` picks from each configured category.
+    # An empty config is treated as a no-op step (nothing to pick → proceed).
+    $ all_chosen = True
+    python:
+        for block in picks_config:
+            cat_name = block.get("category", "")
+            count = block.get("count", 1)
+            if len(selections.get(cat_name, [])) != count:
+                all_chosen = False
+                break
+
+    frame:
+        xfill True
+        yfill True
+        background "#1a1a2e"
+
+        vbox:
+            spacing 0
+
+            use chargen_nav(state, can_next=all_chosen, can_back=True)
+
+            frame:
+                xfill True
+                yfill True
+                background "#1a1a2eFF"
+                padding (40, 20, 40, 20)
+
+                viewport:
+                    scrollbars "vertical"
+                    mousewheel True
+                    xfill True
+                    yfill True
+
+                    vbox:
+                        spacing 15
+                        xfill True
+
+                        text "Choose Abilities" size 28 color "#c9a96e"
+
+                        null height 5
+
+                        for block in picks_config:
+                            $ cat_name = block.get("category", "")
+                            $ cat = state.schema.categories.get(cat_name)
+                            $ count = block.get("count", 1)
+                            $ block_label = block.get("label", cat.display_name if cat is not None else cat_name)
+                            $ block_prompt = block.get("prompt", "")
+                            $ chosen = selections.get(cat_name, [])
+                            $ chosen_count = len(chosen)
+
+                            frame:
+                                xfill True
+                                background "#222238"
+                                padding (15, 12, 15, 12)
+                                vbox:
+                                    spacing 6
+                                    text "[block_label] ([chosen_count]/[count])" size 18 color "#c9a96e"
+                                    if len(block_prompt) > 0:
+                                        text "[block_prompt]" size 13 color "#aaaaaa"
+                                    null height 3
+
+                                    if cat is not None:
+                                        for trait_name in cat.trait_names:
+                                            $ is_picked = trait_name in chosen
+                                            if is_picked:
+                                                $ new_sel = dict(selections)
+                                                $ new_sel[cat_name] = [t for t in chosen if t != trait_name]
+                                                textbutton "\u2611 [trait_name]":
+                                                    text_size 14
+                                                    text_color "#c9a96e"
+                                                    text_hover_color "#ff8888"
+                                                    action SetScreenVariable("selections", new_sel)
+                                            elif chosen_count >= count:
+                                                # Limit reached — show unpicked options as disabled.
+                                                text "\u2610 [trait_name]" size 14 color "#555555"
+                                            else:
+                                                $ new_sel = dict(selections)
+                                                $ new_sel[cat_name] = list(chosen) + [trait_name]
+                                                textbutton "\u2610 [trait_name]":
+                                                    text_size 14
+                                                    text_color "#888888"
+                                                    text_hover_color "#ffffff"
+                                                    action SetScreenVariable("selections", new_sel)
+                                    else:
+                                        text "Unknown category: [cat_name]" size 13 color "#884444" italic True
+
+                            null height 5
+
+                        null height 15
+
+                        if all_chosen:
+                            $ next_result = {"action": "next", "selections": dict(selections)}
+                            textbutton "Next Step >>" text_size 18 text_color "#c9a96e" text_hover_color "#e0c080" action Return(next_result) xalign 0.5
+                        else:
+                            text "Choose the required number from each list before proceeding." size 14 color "#884444" italic True xalign 0.5

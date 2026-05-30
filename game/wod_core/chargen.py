@@ -142,6 +142,15 @@ class ChargenState:
         cat = self.schema.categories.get("resonance")
         return list(cat.trait_names) if cat is not None else []
 
+    def get_boolean_pick_config(self) -> list[dict]:
+        """Config blocks for the boolean_pick step (Gifts, Edges, etc.).
+
+        Each block is a dict: ``{"category": <schema category>, "count": N,
+        "label": <heading>, "prompt": <help text>}``. Read from the active
+        mode's ``boolean_picks`` list in chargen.yaml.
+        """
+        return self.get_mode_config().get("boolean_picks", [])
+
 
 class PointPool:
     """Tracks dot allocation within a budget."""
@@ -374,6 +383,13 @@ def _build_from_allocation(state: ChargenState) -> Character:
             for trait, value in sub_data.items():
                 if state.schema.has_trait(trait):
                     flat_traits[trait] = value
+
+    # Apply boolean trait picks (Gifts, Edges, binary powers chosen from a list)
+    bool_data = state.data.get("boolean_pick", {})
+    for picks in bool_data.get("selections", {}).values():
+        for trait in picks:
+            if state.schema.is_boolean_trait(trait):
+                flat_traits[trait] = 1
 
     # Apply freebie additions
     freebie_data = state.data.get("freebies", {})

@@ -1,6 +1,7 @@
 # tests/test_loader.py
 import os
 import pytest
+from wod_core.engine import Schema
 from wod_core.loader import SplatLoader
 
 
@@ -196,6 +197,37 @@ overrides:
         assert splat.schema.has_trait("Hypertech")
         # Existing traits still present
         assert splat.schema.has_trait("Technology")
+
+
+class TestBooleanSchemaRoundTrip:
+    """Boolean category type must survive schema serialization.
+
+    Schema.to_dict() backs both character pickling and the loader's template
+    override merging; if it dropped `type`, boolean categories would silently
+    revert to dot-rated on those paths.
+    """
+
+    def test_schema_to_dict_preserves_boolean_type(self):
+        schema = Schema({
+            "trait_categories": {
+                "gifts": {
+                    "display_name": "Gifts", "type": "boolean",
+                    "traits": ["Sense Wyrm", "Razor Claws"],
+                },
+                "attributes": {
+                    "display_name": "Attributes", "traits": ["Strength"],
+                    "default": 1, "range": [1, 5],
+                },
+            }
+        })
+        data = schema.to_dict()
+        assert data["trait_categories"]["gifts"]["type"] == "boolean"
+        assert data["trait_categories"]["attributes"]["type"] == "dots"
+
+        rebuilt = Schema(data)
+        assert rebuilt.is_boolean_trait("Sense Wyrm") is True
+        assert rebuilt.categories["gifts"].range == (0, 1)
+        assert rebuilt.is_boolean_trait("Strength") is False
 
 
 class TestTemplateExtension:

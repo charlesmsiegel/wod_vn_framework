@@ -20,6 +20,7 @@ You write your story in Ren'Py. The framework handles character stats, resource 
 - **Resonance** -- Dynamic/Entropic/Static traits color a mage's magick; gate story branches on them like any other stat.
 - **Persistent HUD** -- Quintessence/Paradox split bar, Willpower pips, Health track. Survives save/load.
 - **Tabbed character sheet** -- toggle with Tab. WoD-style dot display, organized by trait category.
+- **Boolean ability traits** -- on/off traits like Werewolf Gifts, Hunter Edges, or binary Discipline powers. Work with `has()` and `gate()`, render as checkboxes on the sheet, and are pickable from a list during chargen.
 - **Gothic dark theme** -- serif typography (EB Garamond body, Cinzel headings), dark parchment palette.
 - **Toast notifications** -- brief on-screen messages for gate results, stat changes, or custom alerts.
 - **Bracket shorthand pre-processor** -- write `[Forces >= 3]` in your script; a CLI tool compiles it to native Ren'Py `if` expressions.

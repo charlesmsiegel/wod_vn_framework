@@ -115,12 +115,12 @@ screen character_sheet():
                                                 text "[group_label]" size 14 color "#888888" italic True
                                                 for trait_name in group_traits:
                                                     if pc.base(trait_name) > 0 or pc.modifier_total(trait_name) != 0 or cat.default > 0:
-                                                        use trait_row(pc, trait_name, cat.range[1])
+                                                        use trait_row(pc, trait_name, cat.range[1], cat.type == "boolean")
                                                 null height 5
                                         else:
                                             for trait_name in cat.trait_names:
                                                 if pc.base(trait_name) > 0 or pc.modifier_total(trait_name) != 0 or cat.default > 0:
-                                                    use trait_row(pc, trait_name, cat.range[1])
+                                                    use trait_row(pc, trait_name, cat.range[1], cat.type == "boolean")
                                         null height 10
                             else:
                                 # Merits & Resources tab
@@ -177,7 +177,7 @@ screen character_sheet():
 ## the modified rating read apart at a glance. A numeric annotation ("+4 = 7")
 ## spells out the modifier and effective total, which also covers buffs that
 ## push a trait past its normal maximum (Crinos, Apocalyptic Form, etc.).
-screen trait_row(pc, trait_name, max_val):
+screen trait_row(pc, trait_name, max_val, is_boolean=False):
     $ base_val = pc.base(trait_name)
     $ mod_total = pc.modifier_total(trait_name)
     $ eff_val = base_val + mod_total
@@ -187,18 +187,25 @@ screen trait_row(pc, trait_name, max_val):
     hbox:
         spacing 10
         text trait_name size 14 color "#e0e0e0" min_width 200
-        hbox:
-            spacing 3
-            yalign 0.5
-            for d in range(dot_count):
-                if d < lo:
-                    text "●" size 14 color "#b8860b"
-                elif mod_total > 0 and d < hi:
-                    text "●" size 14 color "#6a9e6a"
-                elif mod_total < 0 and d < hi:
-                    text "●" size 14 color "#9e5a5a"
-                else:
-                    text "○" size 14 color "#444444"
+        if is_boolean:
+            # On/off trait (Gift, Edge, binary power) — a checkbox, not dots.
+            if eff_val >= 1:
+                text "☑" size 14 color "#b8860b" yalign 0.5
+            else:
+                text "☐" size 14 color "#444444" yalign 0.5
+        else:
+            hbox:
+                spacing 3
+                yalign 0.5
+                for d in range(dot_count):
+                    if d < lo:
+                        text "●" size 14 color "#b8860b"
+                    elif mod_total > 0 and d < hi:
+                        text "●" size 14 color "#6a9e6a"
+                    elif mod_total < 0 and d < hi:
+                        text "●" size 14 color "#9e5a5a"
+                    else:
+                        text "○" size 14 color "#444444"
         if mod_total != 0:
             $ mod_color = "#6a9e6a" if mod_total > 0 else "#9e5a5a"
             $ mod_sign = "+" if mod_total > 0 else "−"

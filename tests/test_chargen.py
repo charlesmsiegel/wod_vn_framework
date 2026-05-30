@@ -1,5 +1,7 @@
 # tests/test_chargen.py
 import os
+from types import SimpleNamespace
+
 import pytest
 import yaml
 from wod_core.chargen import (
@@ -10,6 +12,7 @@ from wod_core.chargen import (
     build_character,
     validate_priorities,
 )
+from wod_core.engine import Schema
 from wod_core.loader import SplatLoader
 
 GAME_DIR = os.path.join(os.path.dirname(__file__), "..", "game")
@@ -263,6 +266,91 @@ class TestBuildCharacter:
         assert char.resources is not None
         assert char.resources.has_resource("quintessence")
         assert char.resources.has_resource("willpower")
+
+class TestBooleanPickChargen:
+    """Boolean trait picks (Gifts, Edges) during character creation."""
+
+    def _boolean_state(self):
+        # _build_from_allocation sets a starting Arete, so the schema needs one.
+        schema = Schema({
+            "trait_categories": {
+                "arete": {
+                    "display_name": "Arete", "traits": ["Arete"],
+                    "default": 1, "range": [1, 5],
+                },
+                "gifts": {
+                    "display_name": "Gifts", "type": "boolean",
+                    "traits": ["Sense Wyrm", "Mother's Touch", "Razor Claws"],
+                },
+            }
+        })
+        chargen_config = {
+            "modes": {
+                "simplified": {
+                    "steps": ["identity", "boolean_pick", "review"],
+                    "boolean_picks": [
+                        {"category": "gifts", "count": 2, "label": "Gifts"},
+                    ],
+                }
+            }
+        }
+        splat_data = SimpleNamespace(
+            resource_config={"resources": {}, "resource_links": {}}
+        )
+        return ChargenState(
+            "garou", "simplified", schema, chargen_config, splat_data
+        )
+
+    def test_get_boolean_pick_config(self):
+        state = self._boolean_state()
+        config = state.get_boolean_pick_config()
+        assert config == [{"category": "gifts", "count": 2, "label": "Gifts"}]
+
+    def test_get_boolean_pick_config_empty_when_unset(self, mage_splat):
+        state = ChargenState(
+            "mage", "full", mage_splat.schema, mage_splat.chargen_config, mage_splat
+        )
+        assert state.get_boolean_pick_config() == []
+
+    def test_build_applies_boolean_picks(self):
+        state = self._boolean_state()
+        state.save_step("identity", {"name": "Garou"})
+        state.save_step("boolean_pick", {
+            "selections": {"gifts": ["Sense Wyrm", "Razor Claws"]},
+        })
+
+        char = build_character(state)
+
+        assert char.identity["name"] == "Garou"
+        assert char.has("Sense Wyrm") is True
+        assert char.has("Razor Claws") is True
+        assert char.has("Mother's Touch") is False
+        assert char.get("Sense Wyrm") == 1
+        assert char.get("Mother's Touch") == 0
+        assert char.gate("Sense Wyrm", ">=", 1) is True
+
+    def test_build_without_boolean_picks_leaves_them_off(self):
+        state = self._boolean_state()
+        state.save_step("identity", {"name": "Garou"})
+        # No boolean_pick step data saved.
+        char = build_character(state)
+        assert char.get("Sense Wyrm") == 0
+        assert char.has("Sense Wyrm") is False
+
+    def test_build_ignores_unknown_boolean_picks(self):
+        state = self._boolean_state()
+        state.save_step("identity", {"name": "Garou"})
+        state.save_step("boolean_pick", {
+            "selections": {"gifts": ["Sense Wyrm", "Not A Gift"]},
+        })
+        char = build_character(state)
+        assert char.has("Sense Wyrm") is True
+        # Unknown trait names are skipped rather than raising.
+        assert "Not A Gift" not in char.traits
+
+
+class TestBuildCharacterTemplate:
+    """Template-mode build (kept separate from boolean-pick tests)."""
 
     def test_build_from_template(self, mage_splat):
         state = ChargenState("mage", "template", mage_splat.schema, mage_splat.chargen_config, mage_splat)
